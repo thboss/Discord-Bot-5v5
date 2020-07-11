@@ -1,9 +1,9 @@
 # Forked from [csgo-league-bot](https://github.com/csgo-league/csgo-league-bot)
 
 ## Setup
-1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server to use it.
+1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server before launch the bot.
 
-   * The permissions integer necessary is `17067072`.
+   * The required permissions is `administrator`.
 
 2. Setup and get an API token for the CS:GO League [web API](https://github.com/csgo-league/csgo-league-web) along with the host base URL.
 
@@ -20,7 +20,7 @@
     * Linux command is `sudo apt-get install postgresql`.
     * Windows users can download [here](https://www.postgresql.org/download/windows).
 
-5. Create a database by running the following commands with the psql tool...
+5. Run the psql tool with `sudo -u postgres psql` and create a database by running the following commands:
 
     ```sql
     CREATE ROLE csgoleague WITH LOGIN PASSWORD 'yourpassword';
@@ -34,10 +34,9 @@
     ```py
     DISCORD_BOT_TOKEN=# Bot token from the Discord developer portal
 
-
-    CSGO_LEAGUE_API_KEY=# API from the CS:GO League web backend .env file
-    CSGO_LEAGUE_API_URL=# URL where the web panel is hosted
-
+    # (Bot automatically create required channels/emojis/role)
+    # ** IMPORTANT **
+    # You should NOT have channels/role with the same name when launch the bot for first time.
     DISCORD_LEAGUE_CATEGORY=# League category name
     DISCORD_LEAGUE_ROLE=# League role name
     DISCORD_LEAGUE_TEXT_QUEUE=# League queue channel name
@@ -45,13 +44,14 @@
     DISCORD_LEAGUE_TEXT_RESULT=# League results channel name
     DISCORD_LEAGUE_VOICE_LOBBY=# League lobby voice channel name
 
+    CSGO_LEAGUE_API_KEY=# API from the CS:GO League web backend .env file
+    CSGO_LEAGUE_API_URL=# URL where the web panel is hosted
+
     POSTGRESQL_USER=# "csgoleague" (if you used the same username)
     POSTGRESQL_PASSWORD=# The DB password you set
     POSTGRESQL_DB=# "csgoleague" (if you used the same DB name)
     POSTGRESQL_HOST=# The IP address of the DB server (127.0.0.1 if running on the same system as the bot)
     ```
-
-    Optionally you may set these environment variables another way.
 
 
 6. Apply the database migrations by running `python3 migrate.py up`.
@@ -73,9 +73,9 @@
 
 `q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
 
-`q!cancel` **-** Cancel current match setup <br>
+`q!maps <random|vote|captains>` **-** Set the map selection method <br>
 
-`q!setmap` **-** Add/Remove maps to default map pool <br>
+`q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
 
 ### Player commands
