@@ -193,6 +193,8 @@ class QueueCog(commands.Cog):
             if removee in voice_lobby.members:
                 await removee.move_to(None)
 
+            _embed = self.bot.embed_template(title=title)
+            await ctx.send(embed=_embed)
             # Update queue display message
             await self.update_last_msg(ctx, embed)
 
@@ -204,13 +206,16 @@ class QueueCog(commands.Cog):
             return
 
         await self.bot.db_helper.delete_all_queued_users(ctx.guild.id)
-        embed = await self.queue_embed(ctx.guild, 'The queue has been emptied')
+        msg = 'The queue has been emptied'
+        embed = await self.queue_embed(ctx.guild, msg)
 
         channel_id = await self.bot.get_guild_data(ctx.guild, 'voice_lobby')
         voice_lobby = ctx.bot.get_channel(channel_id)
         for player in voice_lobby.members:
             await player.move_to(None)
-
+        
+        _embed = self.bot.embed_template(title=msg)
+        await ctx.send(embed=_embed)
         # Update queue display message
         await self.update_last_msg(ctx, embed)
 

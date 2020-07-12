@@ -494,12 +494,12 @@ class MatchCog(commands.Cog):
         if len(message.embeds) < 1:
             return
 
-        panel_url = f'{self.bot.api_helper.base_url}/match/'
-        if panel_url not in message.embeds[0].description:
-            return
-            
         channel_id = await self.bot.get_guild_data(message.guild, 'text_results')
         if message.channel.id != channel_id:
+            return
+            
+        panel_url = f'{self.bot.api_helper.base_url}/match/'
+        if panel_url not in message.embeds[0].description:
             return
 
         match_url = re.search("(?P<url>https?://[^\s]+)", message.embeds[0].description).group("url")
