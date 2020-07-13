@@ -76,6 +76,13 @@
         "none":                 "*None*",
         "active-maps":          "__Active Maps__",
         "inactive-maps":        "__Inactive Maps__",
-        "cannot-set":           "Cannot set {} method without {} permission!"
+        "cannot-set":           "Cannot set {} method without {} permission!",
+        "already-linked":       "Unable to link **{}**: Already linked",
+        "dm-link":              "Click this URL to authorize CS:GO League with your Steam account\n{}",
+        "link-sent":            "Link URL sent to **{}**",
+        "blocked-dm":           "Unable to send URL to **{}**: Blocked DM",
+        "unknown-error":        "Unable to link **{}**: Unknown error",
+        "already-not-linked":   "Unable to unlink **{}**: Already not linked",
+        "unlinked":             "Unlinked **{}**"
     }
 }

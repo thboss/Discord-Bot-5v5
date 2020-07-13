@@ -18,16 +18,19 @@ class AuthCog(commands.Cog):
         is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
 
         if is_linked:
-            title = f'Unable to link **{ctx.author.display_name}**: They are already linked'
+            title = self.bot.translations[self.bot.lang]['already-linked'].format(ctx.author.display_name)
         else:
             link = await self.bot.api_helper.generate_link_url(ctx.author.id)
 
             if link:
                 # Send the author a DM containing this link
-                await ctx.author.send(f'Click this URL to authorize CS:GO League to verify your Steam account\n{link}')
-                title = f'Link URL sent to **{ctx.author.display_name}**'
+                try:
+                    await ctx.author.send(self.bot.translations[self.bot.lang]['dm-link'].format(link))
+                    title = self.bot.translations[self.bot.lang]['link-sent'].format(ctx.author.display_name)
+                except:
+                    title = self.bot.translations[self.bot.lang]['blocked-dm'].format(ctx.author.display_name)
             else:
-                title = f'Unable to link **{ctx.author.display_name}**: Unknown error'
+                title = self.bot.translations[self.bot.lang]['unknown-error'].format(ctx.author.display_name)
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -41,10 +44,10 @@ class AuthCog(commands.Cog):
         is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
 
         if not is_linked:
-            title = f'Unable to unlink **{ctx.author.display_name}**: Your discord are already not linked'
+            title = self.bot.translations[self.bot.lang]['already-not-linked'].format(ctx.author.display_name)
         else:
             await self.bot.api_helper.unlink_discord(ctx.author)
-            title = f'**{ctx.author.display_name}**: Your discord has been unlinked'
+            title = self.bot.translations[self.bot.lang]['unlinked'].format(ctx.author.display_name)
             role_id = await self.bot.get_guild_data(ctx.guild, 'role')
             role = ctx.guild.get_role(role_id)
             await ctx.author.remove_roles(role)
