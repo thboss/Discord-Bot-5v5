@@ -43,6 +43,8 @@
     DISCORD_LEAGUE_TEXT_RESULT= // League results channel name
     DISCORD_LEAGUE_VOICE_LOBBY= // League lobby voice channel name
 
+    DISCORD_LEAGUE_LANGUAGE=en // Bot language
+
     CSGO_LEAGUE_API_KEY= // API from the CS:GO League web backend .env file
     CSGO_LEAGUE_API_URL= // URL where the web panel is hosted
 
