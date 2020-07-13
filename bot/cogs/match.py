@@ -61,7 +61,7 @@ class TeamDraftMenu(discord.Message):
             team_name = '__Team__' if len(team) == 0 else f'__Team {team[0].display_name}__'
 
             if len(team) == 0:
-                team_players = '_Empty_'
+                team_players = self.bot.translations[self.bot.lang]['empty']
             else:
                 team_players = '\n'.join(p.display_name for p in team)
 
@@ -75,7 +75,7 @@ class TeamDraftMenu(discord.Message):
             else:
                 members_left_str += f':heavy_multiplication_x:  ~~{member.display_name}~~\n'
 
-        embed.insert_field_at(1, name='__Players Left__', value=members_left_str)
+        embed.insert_field_at(1, name=self.bot.translations[self.bot.lang]['players-left'], value=members_left_str)
         return embed
 
     def _pick_player(self, picker, pickee):
@@ -83,11 +83,11 @@ class TeamDraftMenu(discord.Message):
         if any(team == [] for team in self.teams) and picker in self.members:
             picking_team = self.teams[self.teams.index([])]  # Get the first empty team
             if picker == pickee:
-                raise PickError(f'Picker \"{picker.display_name}\" you can\'t pick yourself')
+                raise PickError(self.bot.translations[self.bot.lang]['picker-pick-self'].format(picker.display_name))
             elif len(self.teams[0]) == 2 and len(self.teams[1]) == 0 and picker == self.teams[0][0]:
-                raise PickError(f'Picker \"{picker.display_name}\" is not your turn to pick')
+                raise PickError(self.bot.translations[self.bot.lang]['picker-not-turn'].format(picker.display_name))
             elif picker not in self.members_left:
-                raise PickError(f'Picker \"{picker.display_name}\" is not a team captain')
+                raise PickError(self.bot.translations[self.bot.lang]['picker-not-captain'].format(picker.display_name))
             else:
                 self.members_left.remove(picker)
             picking_team.append(picker)
@@ -95,19 +95,19 @@ class TeamDraftMenu(discord.Message):
             if self.picking_order[self.picking_count] == 'A':
                 picking_team = self.teams[0]
             else:
-                raise PickError(f'Picker \"{picker.display_name}\" is not your turn to pick')
+                raise PickError(self.bot.translations[self.bot.lang]['picker-not-turn'].format(picker.display_name))
         elif picker == self.teams[1][0]:
             if self.picking_order[self.picking_count] == 'B':
                 picking_team = self.teams[1]
             else:
-                raise PickError(f'Picker \"{picker.display_name}\" is not your turn to pick')
+                raise PickError(self.bot.translations[self.bot.lang]['picker-not-turn'].format(picker.display_name))
         elif picker in self.members:
-            raise PickError(f'Picker \"{picker.display_name}\" is not a team captain')
+            raise PickError(self.bot.translations[self.bot.lang]['picker-not-captain'].format(picker.display_name))
         else:
-            raise PickError(f'Picker \"{picker.display_name}\" is not a member in the team draft')
+            raise PickError(self.bot.translations[self.bot.lang]['picker-not-member'].format(picker.display_name))
 
         if len(picking_team) > len(self.members) // 2:  # Team is full
-            raise PickError(f'Team \"{picker.display_name}\" is full')
+            raise PickError(self.bot.translations[self.bot.lang]['team-full'].format(picker.display_name))
 
         if not picker == pickee:
             self.members_left.remove(pickee)
@@ -138,8 +138,8 @@ class TeamDraftMenu(discord.Message):
             self._pick_player(member, pick)
         except PickError as e:  # Player not picked
             title = e.message
-        else:  # Player picked
-            title = f'**Team \"{member.display_name}\"** picked \"{pick.display_name}\"'
+        else:  # Player picked 
+            title = self.bot.translations[self.bot.lang]['team-picked'].format(member.display_name, pick.display_name)
 
         if len(self.members_left) == 1:
             fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
@@ -183,7 +183,7 @@ class TeamDraftMenu(discord.Message):
         else:
             raise ValueError(f'Captain method "{captain_method}" isn\'t valid')
 
-        await self.edit(embed=self._picker_embed('Team draft has begun!'))
+        await self.edit(embed=self._picker_embed(self.bot.translations[self.bot.lang]['team-draft-begun']))
 
         items = self.pick_emojis.items()
         for emoji, member in items:
@@ -215,7 +215,9 @@ MAPS = []
 def check_json_file():
     global MAPS
 
-    data = json.load(open('maps_data.json', 'r'))
+    with open('maps_data.json', 'r') as f:
+        data = json.load(f)
+        
     MAPS = [
         Map('Cache',        'de_cache',     '<:de_cache:'    + str(data['de_cache'])    + '>', f'{IMAGE_FOLDER}de_cache.jpg'),
         Map('Cobblestone',  'de_cbble',     '<:de_cbble:'    + str(data['de_cbble'])    + '>', f'{IMAGE_FOLDER}de_cbble.jpg'),
@@ -266,7 +268,7 @@ class MapDraftMenu(discord.Message):
     def _draft_embed(self, title):
         """ Generate the menu embed based on the current status of the map draft. """
         embed = self.bot.embed_template(title=title)
-        embed.set_footer(text='React to any of the map icons below to ban the corresponding map')
+        embed.set_footer(text=self.bot.translations[self.bot.lang]['map-draft-footer'])
         maps_str = ''
 
         if self.map_pool is not None and self.maps_left is not None:
@@ -276,12 +278,12 @@ class MapDraftMenu(discord.Message):
         status_str = ''
 
         if self.captains is not None and self._active_picker is not None:
-            status_str += f'**Captain 1:** {self.captains[0].mention}\n'
-            status_str += f'**Captain 2:** {self.captains[1].mention}\n\n'
-            status_str += f'**Current Choice:** {self._active_picker.mention}'
+            status_str += self.bot.translations[self.bot.lang]['map-draft-capt1'].format(self.captains[0].mention)
+            status_str += self.bot.translations[self.bot.lang]['map-draft-capt2'].format(self.captains[1].mention)
+            status_str += self.bot.translations[self.bot.lang]['map-draft-current'].format(self._active_picker.mention)
 
-        embed.add_field(name='__Maps Left__', value=maps_str)
-        embed.add_field(name='__Info__', value=status_str)
+        embed.add_field(name=self.bot.translations[self.bot.lang]['maps-left'], value=maps_str)
+        embed.add_field(name=self.bot.translations[self.bot.lang]['info'], value=status_str)
         return embed
 
     async def _update_menu(self, title):
@@ -311,7 +313,7 @@ class MapDraftMenu(discord.Message):
 
             return
 
-        await self._update_menu(f'**{user.display_name}** banned {map_ban.name}')
+        await self._update_menu(self.bot.translations[self.bot.lang]['user-banned-map'].format(user.display_name, map_ban.name))
 
     async def draft(self, captain_1, captain_2):
         """ Start the team draft and return the teams after it's finished. """
@@ -326,7 +328,7 @@ class MapDraftMenu(discord.Message):
             self.captains.reverse()
 
         # Edit input message and add emoji button reactions
-        await self.edit(embed=self._draft_embed('Map bans have begun!'))
+        await self.edit(embed=self._draft_embed(self.bot.translations[self.bot.lang]['map-bans-begun']))
 
         for m in self.map_pool:
             await self.add_reaction(m.emoji)
@@ -370,7 +372,7 @@ class MatchCog(commands.Cog):
         """ Balance teams based on players' RankMe score. """
         # Only balance teams with even amounts of players
         if len(member_ids) % 2 != 0:
-            raise ValueError('members argument must have even length')
+            raise ValueError(self.bot.translations[self.bot.lang]['members-must-even'])
 
         # Get players and sort by RankMe score
         members_dict = dict(
@@ -421,7 +423,7 @@ class MatchCog(commands.Cog):
         team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
 
         match_category = await guild.create_category_channel(
-            f'Team_{team1_name} vs Team_{team2_name}')
+            self.bot.translations[self.bot.lang]['team-vs-team'].format(team1_name, team2_name))
         role = discord.utils.get(guild.roles, name='@everyone')
 
         voice_channel_one = await guild.create_voice_channel(name=f'Team {team1_name}',
@@ -518,8 +520,8 @@ class MatchCog(commands.Cog):
         # Notify everyone to ready up
         member_mentions = [member.mention for member in members]
         ready_emoji = '✅'
-        description = f'**Players:**\n{chr(10).join(member_mentions)}\n\nReact with the {ready_emoji} below to ready up (1 min)'
-        burst_embed = self.bot.embed_template(title='Queue has filled up!', description=description)
+        description = self.bot.translations[self.bot.lang]['react-ready'].format(chr(10).join(member_mentions), ready_emoji)
+        burst_embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['queue-filled'], description=description)
         queue_cog = self.bot.get_cog('QueueCog')
         msg = queue_cog.last_queue_msgs.get(ctx.guild)
         channel_id = await self.bot.get_guild_data(ctx.guild, 'text_queue')
@@ -565,9 +567,9 @@ class MatchCog(commands.Cog):
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             description = '\n'.join(':heavy_multiplication_x:  ' + member.mention for member in unreadied)
-            title = 'Not everyone was ready!'
+            title = self.bot.translations[self.bot.lang]['not-all-ready']
             burst_embed = self.bot.embed_template(title=title, description=description)
-            burst_embed.set_footer(text='The missing players have been removed from the queue')
+            burst_embed.set_footer(text=self.bot.translations[self.bot.lang]['not-ready-removed'])
             # disconnect unreadied players from the lobby voice channel
             self.moving_players = True
             for player in unreadied:
@@ -598,7 +600,7 @@ class MatchCog(commands.Cog):
             elif team_method == 'random':
                 team_one, team_two = await self.randomize_teams(members)
             else:
-                raise ValueError(f'Team method "{team_method}" isn\'t valid')
+                raise ValueError(self.bot.translations[self.bot.lang]['team-method-not-valid'].format(team_method))
 
             # Get map pick
             if map_method == 'captains':
@@ -608,37 +610,33 @@ class MatchCog(commands.Cog):
             elif map_method == 'random':
                 map_pick = await self.random_map(ctx.guild)
             else:
-                raise ValueError(f'Map method "{map_method}" isn\'t valid')
+                raise ValueError(self.bot.translations[self.bot.lang]['map-method-not-valid'].format(map_method))
             
             self.moving_players = True
             # Check if able to get a match server and edit message embed accordingly
             try:
                 match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.name)  # Request match from API
             except aiohttp.ClientResponseError:
-                description = 'Sorry! Looks like there aren\'t any servers available at this time. ' \
-                              'Please try again later.'
-                burst_embed = self.bot.embed_template(title='There was a problem!', description=description)
+                description = self.bot.translations[self.bot.lang]['no-servers']
+                burst_embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['problem'], description=description)
                 await ready_message.delete()
                 self.dict_ready_message.pop(ctx.guild)
                 await ctx.guild.channels[index_channel].send(embed=burst_embed)
                 self.moving_players = True
                 return False
             else:
-                for count in range(2):
-                    for i in range(1, 4):
-                        burst_embed = self.bot.embed_template(description='Fetching server' + '.'*i)
-                        await ready_message.edit(embed=burst_embed)
-                        await asyncio.sleep(1)  
+                burst_embed = self.bot.embed_template(description=self.bot.translations[self.bot.lang]['fetching-server'])
+                await ready_message.edit(embed=burst_embed)
 
                 match_id = str(match.get_match_id)
-                description = f'**URL:** {match.connect_url}\n**Command:** `{match.connect_command}`\n**Map:** {map_pick.name}\n**Match ID:** {match_id}'
-                burst_embed = self.bot.embed_template(title='Match server is ready!', description=description)
+                description = self.bot.translations[self.bot.lang]['server-connect'].format(match.connect_url, match.connect_command, map_pick.name, match_id)
+                burst_embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['server-ready'], description=description)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
-                burst_embed.add_field(name=f'__Team {team_one[0].display_name}__',
+                burst_embed.add_field(name=self.bot.translations[self.bot.lang]['team-name'].format(team_one[0].display_name),
                                       value='\n'.join(member.mention for member in team_one))
-                burst_embed.add_field(name=f'__Team {team_two[0].display_name}__',
+                burst_embed.add_field(name=self.bot.translations[self.bot.lang]['team-name'].format(team_two[0].display_name),
                                       value='\n'.join(member.mention for member in team_two))
-                burst_embed.set_footer(text='Server will close after 5 minutes if anyone doesn\'t join')
+                burst_embed.set_footer(text=self.bot.translations[self.bot.lang]['server-message-footer'])
 
             await ready_message.delete()
             self.dict_ready_message.pop(ctx.guild)
@@ -661,17 +659,17 @@ class MatchCog(commands.Cog):
         valid_methods = ['captains', 'autobalance', 'random']
 
         if method is None:
-            title = f'The current team creation method is {team_method}'
+            title = self.bot.translations[self.bot.lang]['team-method'].format(team_method)
         else:
             method = method.lower()
 
             if method == team_method:
-                title = f'The current team creation method is already set to {team_method}'
+                title = self.bot.translations[self.bot.lang]['team-method-already'].format(team_method)
             elif method in valid_methods:
-                title = f'Team creation method set to {method}'
+                title = self.bot.translations[self.bot.lang]['set-team-method'].format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, team_method=method)
             else:
-                title = f'Team creation method must be {valid_methods[0]}, {valid_methods[1]} or {valid_methods[2]}'
+                title = self.bot.translations[self.bot.lang]['team-valid-methods'].format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -689,17 +687,17 @@ class MatchCog(commands.Cog):
         valid_methods = ['volunteer', 'rank', 'random']
 
         if method is None:
-            title = f'The current captain selection method is {captain_method}'
+            title = self.bot.translations[self.bot.lang]['captains-method'].format(captain_method)
         else:
             method = method.lower()
 
             if method == captain_method:
-                title = f'The current captain selection method is already set to {captain_method}'
+                title = self.bot.translations[self.bot.lang]['captains-method-already'].format(captain_method)
             elif method in valid_methods:
-                title = f'Captain selection method set to {method}'
+                title = self.bot.translations[self.bot.lang]['set-captains-method'].format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, captain_method=method)
             else:
-                title = f'Captain selection method must be {valid_methods[0]}, {valid_methods[1]} or {valid_methods[2]}'
+                title = self.bot.translations[self.bot.lang]['captains-valid-method'].format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -716,17 +714,17 @@ class MatchCog(commands.Cog):
         valid_methods = ['captains', 'vote', 'random']
 
         if method is None:
-            title = f'The current map selection method is {map_method}'
+            title = self.bot.translations[self.bot.lang]['map-method'].format(map_method)
         else:
             method = method.lower()
 
             if method == map_method:
-                title = f'The current map selection method is already set to {map_method}'
+                title = self.bot.translations[self.bot.lang]['map-method-already'].format(map_method)
             elif method in valid_methods:
-                title = f'Map selection method set to {method}'
+                title = self.bot.translations[self.bot.lang]['set-map-method'].format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, map_method=method)
             else:
-                title = f'Map selection method must be {valid_methods[0]}, {valid_methods[1]} or {valid_methods[2]}'
+                title = self.bot.translations[self.bot.lang]['map-valid-method'].format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -743,7 +741,7 @@ class MatchCog(commands.Cog):
         map_pool = [m.dev_name for m in MAPS if guild_data[m.dev_name]]
 
         if len(args) == 0:
-            embed = self.bot.embed_template(title='Current map pool')
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['map-pool'])
         else:
             description = ''
             any_wrong_arg = False  # Indicates if the command was used correctly
@@ -753,26 +751,26 @@ class MatchCog(commands.Cog):
                 map_obj = next((m for m in MAPS if m.dev_name == map_name), None)
 
                 if map_obj is None:
-                    description += f'\u2022 Could not interpret `{arg}`\n'
+                    description += '\u2022 ' + self.bot.translations[self.bot.lang]['could-not-interpret'].format(arg)
                     any_wrong_arg = True
                     continue
 
                 if arg.startswith('+'):  # Add map
                     if map_name not in map_pool:
                         map_pool.append(map_name)
-                        description += f'\u2022 Added `{map_name}`\n'
+                        description += '\u2022 ' + self.bot.translations[self.bot.lang]['added-map'].format(map_name)
                 elif arg.startswith('-'):  # Remove map
                     if map_name in map_pool:
                         map_pool.remove(map_name)
-                        description += f'\u2022 Removed `{map_name}`\n'
+                        description += '\u2022 ' + self.bot.translations[self.bot.lang]['removed-map'].format(map_name)
 
             if len(map_pool) < 3:
-                description = 'Pool cannot have fewer than 3 maps!'
+                description = self.bot.translations[self.bot.lang]['map-pool-fewer-3']
             else:
                 map_pool_data = {m.dev_name: m.dev_name in map_pool for m in MAPS}
                 await self.bot.db_helper.update_guild(ctx.guild.id, **map_pool_data)
 
-            embed = self.bot.embed_template(title='Modified map pool', description=description)
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['modified-map-pool'], description=description)
 
             if any_wrong_arg:  # Add example usage footer if command was used incorrectly
                 embed.set_footer(text=f'Ex: {self.bot.command_prefix[0]}mpool +de_cache -de_mirage')
@@ -781,10 +779,10 @@ class MatchCog(commands.Cog):
         inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in MAPS if m.dev_name not in map_pool)
 
         if not inactive_maps:
-            inactive_maps = '*None*'
+            inactive_maps = self.bot.translations[self.bot.lang]['none'] # '*None*'
 
-        embed.add_field(name='__Active Maps__', value=active_maps)
-        embed.add_field(name='__Inactive Maps__', value=inactive_maps)
+        embed.add_field(name=self.bot.translations[self.bot.lang]['active-maps'], value=active_maps)
+        embed.add_field(name=self.bot.translations[self.bot.lang]['inactive-maps'], value=inactive_maps)
         await ctx.send(embed=embed)
 
     @teams.error
@@ -796,6 +794,6 @@ class MatchCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            title = f'Cannot set {ctx.command.name} method without {missing_perm} permission!'
+            title = self.bot.translations[self.bot.lang]['cannot-set'].format(ctx.command.name, missing_perm)
             embed = self.bot.embed_template(title=title)
             await ctx.send(embed=embed)

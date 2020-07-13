@@ -22,7 +22,7 @@ def run_bot():
     # Instantiate bot and run
     env_varnames = ['DISCORD_BOT_TOKEN', 'CSGO_LEAGUE_API_URL', 'CSGO_LEAGUE_API_KEY', 'DISCORD_LEAGUE_CATEGORY',
                     'DISCORD_LEAGUE_ROLE', 'DISCORD_LEAGUE_TEXT_QUEUE', 'DISCORD_LEAGUE_TEXT_COMMANDS',
-                    'DISCORD_LEAGUE_TEXT_RESULT', 'DISCORD_LEAGUE_VOICE_LOBBY']
+                    'DISCORD_LEAGUE_TEXT_RESULT', 'DISCORD_LEAGUE_VOICE_LOBBY', 'DISCORD_LEAGUE_LANGUAGE']
     bot = LeagueBot(*itemgetter(*env_varnames)(environ), db_pool=db_pool)
     bot.run()
 

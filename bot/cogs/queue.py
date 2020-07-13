@@ -2,7 +2,6 @@
 
 from discord.ext import commands
 from discord.errors import NotFound
-from discord.utils import get
 import asyncio
 
 
@@ -14,11 +13,6 @@ class QueueCog(commands.Cog):
         self.bot = bot
         self.last_queue_msgs = {}
 
-    @commands.command(brief='get emoji')
-    async def emoji(self, ctx):
-        e = get(ctx.guild.emojis, name='de_mirage')
-        print(e)
-
     async def queue_embed(self, guild, title=None):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(guild.id)
@@ -28,12 +22,12 @@ class QueueCog(commands.Cog):
             title += f' ({len(queued_ids)}/{capacity})'
 
         if len(queued_ids) == 0:  # If there are no members in the queue
-            queue_str = '_The queue is empty..._'
+            queue_str = self.bot.translations[self.bot.lang]['queue-is-empty']
         else:  # members still in queue
             queue_str = ''.join(f'{num}. <@{member_id}>\n' for num, member_id in enumerate(queued_ids, start=1))
 
         embed = self.bot.embed_template(title=title, description=queue_str)
-        embed.set_footer(text='Players will receive a notification when the queue fills up')
+        embed.set_footer(text=self.bot.translations[self.bot.lang]['receive-notification'])
         return embed
 
     async def update_last_msg(self, ctx, embed):
@@ -57,7 +51,7 @@ class QueueCog(commands.Cog):
             return
 
         if not await self.bot.api_helper.is_linked(ctx.author.id):
-            msg = f'{ctx.author.mention} your discord is not linked to steam account, type **!link** to link it'
+            msg = self.bot.translations[self.bot.lang]['discord-not-linked'].format(ctx.author.mention)
             embed = self.bot.embed_template(description=msg, color=self.bot.color)
             await ctx.send(embed=embed)
             return
@@ -67,10 +61,7 @@ class QueueCog(commands.Cog):
         await ctx.author.add_roles(role)
         await self.bot.api_helper.update_discord_name(ctx.author)
 
-        channel_id = await self.bot.get_guild_data(ctx.guild, 'voice_lobby')
-        voice_lobby = ctx.bot.get_channel(channel_id)
-        msg = f'{ctx.author.mention} you got {role.mention} role and access to join **{voice_lobby.name}** ' \
-              f'voice channel'
+        msg = self.bot.translations[self.bot.lang]['discord-get-role'].format(ctx.author.mention, role.mention)
         embed = self.bot.embed_template(description=msg, color=self.bot.color)
         await ctx.send(embed=embed)
 
@@ -89,7 +80,7 @@ class QueueCog(commands.Cog):
                 return
             else:
                 if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
-                    title = f'Unable to add **{name}**: Their account is not linked'
+                    title = self.bot.translations[self.bot.lang]['account-not-linked'].format(name)
                 else:  # Message author is linked
                     awaitables = [
                         self.bot.api_helper.get_player(member.id),
@@ -103,17 +94,17 @@ class QueueCog(commands.Cog):
                     capacity = results[3]['capacity']
 
                     if member.id in queue_ids:  # Author already in queue
-                        title = f'Unable to add **{name}**: Already in the queue'
+                        title = self.bot.translations[self.bot.lang]['already-in-queue'].format(name)
                     elif len(queue_ids) >= capacity:  # Queue full
-                        title = f'Unable to add **{name}**: Queue is full'
+                        title = self.bot.translations[self.bot.lang]['queue-is-full'].format(name)
                     elif not player:  # ApiHelper couldn't get player
-                        title = f'Unable to add **{name}**: Cannot verify match status'
+                        title = self.bot.translations[self.bot.lang]['cannot-verify-match'].format(name)
                     elif player.in_match:  # member is already in a match
-                        title = f'Unable to add **{name}**: They are already in a match'
+                        title = self.bot.translations[self.bot.lang]['already-in-match'].format(name)
                     else:  # member can be added
                         await self.bot.db_helper.insert_queued_users(member.guild.id, member.id)
                         queue_ids += [member.id]
-                        title = f'**{name}** has been added to the queue'
+                        title = self.bot.translations[self.bot.lang]['added-to-queue'].format(name)
 
                         # Check and burst queue if full
                         if len(queue_ids) == capacity:
@@ -156,9 +147,9 @@ class QueueCog(commands.Cog):
                 removed = await self.bot.db_helper.delete_queued_users(member.guild.id, member.id)
 
                 if member.id in removed:
-                    title = f'**{name}** has been removed from the queue'
+                    title = self.bot.translations[self.bot.lang]['removed-from-queue'].format(name)
                 else:
-                    title = f'**{name}** isn\'t in the queue'
+                    title = self.bot.translations[self.bot.lang]['not-in-queue'].format(name)
                                   
                 embed = await self.queue_embed(member.guild, title)
                 # Update queue display message
@@ -175,16 +166,16 @@ class QueueCog(commands.Cog):
         try:
             removee = ctx.message.mentions[0]
         except IndexError:
-            embed = self.bot.embed_template(title='Mention a player in the command to remove them')
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['mention-to-remove'])
             await ctx.send(embed=embed)
         else:
             removed = await self.bot.db_helper.delete_queued_users(ctx.guild.id, removee.id)
             name = removee.nick if removee.nick is not None else removee.display_name
 
             if removee.id in removed:
-                title = f'**{name}** has been removed from the queue'
+                title = self.bot.translations[self.bot.lang]['removed-from-queue'].format(name)
             else:
-                title = f'**{name}** is not in the queue'
+                title = self.bot.translations[self.bot.lang]['removed-not-in-queue'].format(name)
 
             embed = await self.queue_embed(ctx.guild, title)
 
@@ -206,7 +197,7 @@ class QueueCog(commands.Cog):
             return
 
         await self.bot.db_helper.delete_all_queued_users(ctx.guild.id)
-        msg = 'The queue has been emptied'
+        msg = self.bot.translations[self.bot.lang]['queue-emptied']
         embed = await self.queue_embed(ctx.guild, msg)
 
         channel_id = await self.bot.get_guild_data(ctx.guild, 'voice_lobby')
@@ -226,7 +217,7 @@ class QueueCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=f'Cannot remove players without {missing_perm} permission!')
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['remove-perm'].format(missing_perm))
             await ctx.send(embed=embed)
 
     @commands.command(usage='cap [new capacity]',
@@ -240,24 +231,24 @@ class QueueCog(commands.Cog):
         capacity = await self.bot.get_guild_data(ctx.guild, 'capacity')
 
         if len(args) == 0:  # No size argument specified
-            embed = self.bot.embed_template(title=f'The current queue capacity is {capacity}')
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['current-capacity'].format(capacity))
         else:
             new_cap = args[0]
 
             try:
                 new_cap = int(new_cap)
             except ValueError:
-                embed = self.bot.embed_template(title=f'{new_cap} is not an integer')
+                embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['capacity-not-integer'].format(new_cap))
             else:
                 if new_cap == capacity:
-                    embed = self.bot.embed_template(title=f'Capacity is already set to {capacity}')
+                    embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['capacity-already'].format(capacity))
                 elif new_cap < 2 or new_cap > 100:
-                    embed = self.bot.embed_template(title='Capacity is outside of valid range (2-100)')
+                    embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['capacity-out-range'])
                 else:
                     await self.bot.db_helper.delete_all_queued_users(ctx.guild.id)
                     await self.bot.db_helper.update_guild(ctx.guild.id, capacity=new_cap)
-                    embed = self.bot.embed_template(title=f'Queue capacity set to {new_cap}')
-                    embed.set_footer(text='The queue has been emptied because of the capacity change')
+                    embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['set-capacity'].format(new_cap))
+                    embed.set_footer(text=self.bot.translations[self.bot.lang]['queue-emptied-footer'])
 
                     channel_id = await self.bot.get_guild_data(ctx.guild, 'voice_lobby')
                     voice_lobby = ctx.bot.get_channel(channel_id)
@@ -274,5 +265,5 @@ class QueueCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=f'Cannot change queue capacity without {missing_perm} permission!')
+            embed = self.bot.embed_template(title=self.bot.translations[self.bot.lang]['change-capacity-perm'].format(missing_perm))
             await ctx.send(embed=embed)
