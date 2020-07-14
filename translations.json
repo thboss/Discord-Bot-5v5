@@ -23,6 +23,7 @@
         "set-capacity":         "Queue capacity set to **{}**",
         "queue-emptied-footer": "The queue has been emptied because of the capacity change",
         "change-capacity-perm": "Cannot change queue capacity without **{}** permission!",
+        "team-pick-footer":     "React to any of the numbers below to pick the corresponding member",
         "empty":                "_Empty_",
         "players-left":         "__Players Left__",
         "picker-pick-self":     "Picker **{}** you can't pick yourself",

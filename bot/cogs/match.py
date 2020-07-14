@@ -56,7 +56,7 @@ class TeamDraftMenu(discord.Message):
     def _picker_embed(self, title):
         """ Generate the menu embed based on the current status of the team draft. """
         embed = self.bot.embed_template(title=title)
-        embed.set_footer(text='React to any of the numbers below to pick the corresponding member')
+        embed.set_footer(text=self.bot.translate('team-pick-footer'))
 
         for team in self.teams:
             team_name = '__Team__' if len(team) == 0 else f'__Team {team[0].display_name}__'
