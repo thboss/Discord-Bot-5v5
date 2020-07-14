@@ -8,6 +8,7 @@ import random
 import json
 import re
 from threading import Timer
+from collections import defaultdict
 
 
 class PickError(ValueError):
@@ -360,7 +361,8 @@ class MatchCog(commands.Cog):
         self.pending_ready_tasks = {}
         self.dict_ready_message = {}
         self.match_dict = {}
-        self.moving_players = False
+        self.moving_players = {}
+        self.moving_players = defaultdict(lambda: False, self.moving_players)
 
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
@@ -571,7 +573,7 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translations[self.bot.lang]['not-ready-removed'])
             # disconnect unreadied players from the lobby voice channel
-            self.moving_players = True
+            self.moving_players[ctx.guild] = True
             for player in unreadied:
                 try:
                     await player.move_to(None)
@@ -579,7 +581,7 @@ class MatchCog(commands.Cog):
                     pass
 
             await ready_message.edit(embed=burst_embed)
-            self.moving_players = False
+            self.moving_players[ctx.guild] = False
             return False  # Not everyone readied up
         else:  # Everyone readied up
             if ctx.guild in self.pending_ready_tasks:
@@ -612,7 +614,7 @@ class MatchCog(commands.Cog):
             else:
                 raise ValueError(self.bot.translations[self.bot.lang]['map-method-not-valid'].format(map_method))
             
-            self.moving_players = True
+            self.moving_players[ctx.guild] = True
             # Check if able to get a match server and edit message embed accordingly
             try:
                 match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.name)  # Request match from API
@@ -622,11 +624,12 @@ class MatchCog(commands.Cog):
                 await ready_message.delete()
                 self.dict_ready_message.pop(ctx.guild)
                 await ctx.guild.channels[index_channel].send(embed=burst_embed)
-                self.moving_players = True
+                self.moving_players[ctx.guild] = True
                 return False
             else:
                 burst_embed = self.bot.embed_template(description=self.bot.translations[self.bot.lang]['fetching-server'])
                 await ready_message.edit(embed=burst_embed)
+                await asyncio.sleep(5)
 
                 match_id = str(match.get_match_id)
                 description = self.bot.translations[self.bot.lang]['server-connect'].format(match.connect_url, match.connect_command, map_pick.name, match_id)
@@ -642,7 +645,7 @@ class MatchCog(commands.Cog):
             self.dict_ready_message.pop(ctx.guild)
             await ctx.guild.channels[index_channel].send(embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
-            self.moving_players = False
+            self.moving_players[ctx.guild] = False
 
             return True  # Everyone readied up
 

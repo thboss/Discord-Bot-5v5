@@ -76,84 +76,84 @@ class QueueCog(commands.Cog):
         match_cog = self.bot.get_cog('MatchCog')
 
         if after.channel is not None:
-            if (after.channel != voice_lobby and before.channel != voice_lobby) or match_cog.moving_players:
+            if (after.channel != voice_lobby and before.channel != voice_lobby) or match_cog.moving_players[member.guild]:
                 return
-            else:
-                if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
-                    title = self.bot.translations[self.bot.lang]['account-not-linked'].format(name)
-                else:  # Message author is linked
-                    awaitables = [
-                        self.bot.api_helper.get_player(member.id),
-                        self.bot.db_helper.insert_users(member.id),
-                        self.bot.db_helper.get_queued_users(member.guild.id),
-                        self.bot.db_helper.get_guild(member.guild.id)
-                    ]
-                    results = await asyncio.gather(*awaitables, loop=self.bot.loop)
-                    player = results[0]
-                    queue_ids = results[2]
-                    capacity = results[3]['capacity']
 
-                    if member.id in queue_ids:  # Author already in queue
-                        title = self.bot.translations[self.bot.lang]['already-in-queue'].format(name)
-                    elif len(queue_ids) >= capacity:  # Queue full
-                        title = self.bot.translations[self.bot.lang]['queue-is-full'].format(name)
-                    elif not player:  # ApiHelper couldn't get player
-                        title = self.bot.translations[self.bot.lang]['cannot-verify-match'].format(name)
-                    elif player.in_match:  # member is already in a match
-                        title = self.bot.translations[self.bot.lang]['already-in-match'].format(name)
-                    else:  # member can be added
-                        await self.bot.db_helper.insert_queued_users(member.guild.id, member.id)
-                        queue_ids += [member.id]
-                        title = self.bot.translations[self.bot.lang]['added-to-queue'].format(name)
-
-                        # Check and burst queue if full
-                        if len(queue_ids) == capacity:
-                            queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
-                            try:
-                                all_readied = await match_cog.start_match(member, queue_members)
-                            except asyncio.TimeoutError:
-                                return
-
-                            if all_readied:
-                                await self.bot.db_helper.delete_queued_users(member.guild.id, *queue_ids)
-
-                            return
-
-                embed = await self.queue_embed(member.guild, title)
-                # Delete last queue message
-                await self.update_last_msg(member, embed)
-
-        if before.channel is not None:
-            if before.channel != voice_lobby or match_cog.moving_players:
-                return
-            else:
+            if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
+                title = self.bot.translations[self.bot.lang]['account-not-linked'].format(name)
+            else:  # Message author is linked
                 awaitables = [
+                    self.bot.api_helper.get_player(member.id),
+                    self.bot.db_helper.insert_users(member.id),
                     self.bot.db_helper.get_queued_users(member.guild.id),
                     self.bot.db_helper.get_guild(member.guild.id)
                 ]
                 results = await asyncio.gather(*awaitables, loop=self.bot.loop)
-                queue_ids = results[0]
-                capacity = results[1]['capacity']                             
+                player = results[0]
+                queue_ids = results[2]
+                capacity = results[3]['capacity']
 
-                if len(queue_ids) == capacity:
-                    if member.id in queue_ids:
-                        if member.guild in match_cog.pending_ready_tasks:
-                            match_cog.pending_ready_tasks[member.guild].close()
-                            match_cog.pending_ready_tasks.pop(member.guild)
-                        
-                        if member.guild in match_cog.dict_ready_message:
-                            await match_cog.dict_ready_message[member.guild].delete()
-                        
-                removed = await self.bot.db_helper.delete_queued_users(member.guild.id, member.id)
+                if member.id in queue_ids:  # Author already in queue
+                    title = self.bot.translations[self.bot.lang]['already-in-queue'].format(name)
+                elif len(queue_ids) >= capacity:  # Queue full
+                    title = self.bot.translations[self.bot.lang]['queue-is-full'].format(name)
+                elif not player:  # ApiHelper couldn't get player
+                    title = self.bot.translations[self.bot.lang]['cannot-verify-match'].format(name)
+                elif player.in_match:  # member is already in a match
+                    title = self.bot.translations[self.bot.lang]['already-in-match'].format(name)
+                else:  # member can be added
+                    await self.bot.db_helper.insert_queued_users(member.guild.id, member.id)
+                    queue_ids += [member.id]
+                    title = self.bot.translations[self.bot.lang]['added-to-queue'].format(name)
 
-                if member.id in removed:
-                    title = self.bot.translations[self.bot.lang]['removed-from-queue'].format(name)
-                else:
-                    title = self.bot.translations[self.bot.lang]['not-in-queue'].format(name)
-                                  
-                embed = await self.queue_embed(member.guild, title)
-                # Update queue display message
-                await self.update_last_msg(member, embed)
+                    # Check and burst queue if full
+                    if len(queue_ids) == capacity:
+                        queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
+                        try:
+                            all_readied = await match_cog.start_match(member, queue_members)
+                        except asyncio.TimeoutError:
+                            return
+
+                        if all_readied:
+                            await self.bot.db_helper.delete_queued_users(member.guild.id, *queue_ids)
+
+                        return
+
+            embed = await self.queue_embed(member.guild, title)
+            # Delete last queue message
+            await self.update_last_msg(member, embed)
+
+        if before.channel is not None:
+            if before.channel != voice_lobby or match_cog.moving_players[member.guild]:
+                return
+
+            awaitables = [
+                self.bot.db_helper.get_queued_users(member.guild.id),
+                self.bot.db_helper.get_guild(member.guild.id)
+            ]
+            results = await asyncio.gather(*awaitables, loop=self.bot.loop)
+            queue_ids = results[0]
+            capacity = results[1]['capacity']                             
+
+            if len(queue_ids) == capacity:
+                if member.id in queue_ids:
+                    if member.guild in match_cog.pending_ready_tasks:
+                        match_cog.pending_ready_tasks[member.guild].close()
+                        match_cog.pending_ready_tasks.pop(member.guild)
+                    
+                    if member.guild in match_cog.dict_ready_message:
+                        await match_cog.dict_ready_message[member.guild].delete()
+                    
+            removed = await self.bot.db_helper.delete_queued_users(member.guild.id, member.id)
+
+            if member.id in removed:
+                title = self.bot.translations[self.bot.lang]['removed-from-queue'].format(name)
+            else:
+                title = self.bot.translations[self.bot.lang]['not-in-queue'].format(name)
+                                
+            embed = await self.queue_embed(member.guild, title)
+            # Update queue display message
+            await self.update_last_msg(member, embed)
 
     @commands.command(usage='remove <member mention>',
                       brief='Remove the mentioned member from the queue (must have server kick perms)')
