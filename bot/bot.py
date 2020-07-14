@@ -19,7 +19,7 @@ class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
     def __init__(self, discord_token, api_base_url, api_key, str_category, str_role, str_text_queue,
-                 str_text_commands, str_text_results, str_voice_lobby, lang, db_pool):
+                 str_text_commands, str_text_results, str_voice_lobby, language, db_pool):
         """ Set attributes and configure bot. """
         # Call parent init
         super().__init__(command_prefix=('q!', 'Q!'), case_insensitive=True)
@@ -34,7 +34,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.str_text_commands = str_text_commands
         self.str_text_results = str_text_results
         self.str_voice_lobby = str_voice_lobby
-        self.lang = lang
+        self.language = language
         self.db_pool = db_pool
 
         with open('translations.json', 'r') as f:
@@ -70,6 +70,9 @@ class LeagueBot(commands.AutoShardedBot):
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
         self.add_cog(cogs.StatsCog(self))
+    
+    def translate(self, text):
+        return self.translations[self.language][text]
 
     def embed_template(self, **kwargs):
         """ Implement the bot's default-style embed. """
