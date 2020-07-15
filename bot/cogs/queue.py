@@ -41,7 +41,11 @@ class QueueCog(commands.Cog):
             self.last_queue_msgs[ctx.guild] = await ctx.guild.channels[index_channel].send(embed=embed)
         else:
             try:
-                await msg.edit(embed=embed)
+                if len(msg.embeds) < 1:
+                    await msg.delete()
+                    self.last_queue_msgs[ctx.guild] = await ctx.guild.channels[index_channel].send(embed=embed)
+                else:
+                    await msg.edit(embed=embed)
             except NotFound:
                 self.last_queue_msgs[ctx.guild] = await ctx.guild.channels[index_channel].send(embed=embed)
 
