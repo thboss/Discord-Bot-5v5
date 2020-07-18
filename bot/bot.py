@@ -168,8 +168,8 @@ class LeagueBot(commands.AutoShardedBot):
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
         await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
-        await self.setup_channels()
         await self.setup_emojis()
+        await self.setup_channels()
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
