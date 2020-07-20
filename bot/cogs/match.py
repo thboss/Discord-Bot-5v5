@@ -147,7 +147,6 @@ class TeamDraftMenu(discord.Message):
             fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
             fat_kid_team.append(self.members_left.pop(0))
             await self._update_menu(title)
-            await asyncio.sleep(3)
 
             if self.future is not None:
                 self.future.set_result(None)
