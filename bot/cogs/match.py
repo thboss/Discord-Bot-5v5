@@ -607,10 +607,7 @@ class MatchCog(commands.Cog):
         if panel_url not in message.embeds[0].description:
             return
 
-        match_url = re.search("(?P<url>https?://[^\s]+)", message.embeds[0].description).group("url")
-        match_id = ''
-        for i in range(len(panel_url), len(match_url) - 1):
-            match_id += match_url[i]
+        match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
 
         try:
             if match_id in self.match_dict[message.guild]:
@@ -706,6 +703,7 @@ class MatchCog(commands.Cog):
             else:
                 raise ValueError(self.bot.translate('team-method-not-valid').format(team_method))
 
+            await asyncio.sleep(1)
             # Get map pick
             if map_method == 'captains':
                 map_pick = await self.draft_maps(ready_message, mpool, team_one[0], team_two[0])
@@ -715,6 +713,10 @@ class MatchCog(commands.Cog):
                 map_pick = await self.random_map(ctx.guild, mpool)
             else:
                 raise ValueError(self.bot.translate('map-method-not-valid').format(map_method))
+
+            await asyncio.sleep(1)
+            burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
+            await ready_message.edit(embed=burst_embed)
             
             self.moving_players[ctx.guild] = True
             # Check if able to get a match server and edit message embed accordingly
@@ -729,10 +731,7 @@ class MatchCog(commands.Cog):
                 self.moving_players[ctx.guild] = False
                 return False
             else:
-                burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
-                await ready_message.edit(embed=burst_embed)
                 await asyncio.sleep(5)
-
                 match_id = str(match.get_match_id)
                 description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command, map_pick.name, match_id)
                 burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
