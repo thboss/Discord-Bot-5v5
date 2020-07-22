@@ -219,8 +219,8 @@ MAPS = []
 def check_json_file():
     global MAPS
     file_names = os.listdir(IMAGE_PATH)
-    map_names = [name.split(':')[0] for name in file_names]
-    dev_names = [dev.split(':')[1].split('.')[0] for dev in file_names]
+    map_names = [name.split('-')[0] for name in file_names]
+    dev_names = [dev.split('-')[1].split('.')[0] for dev in file_names]
 
     with open('maps_data.json', 'r') as f:
         data = json.load(f)
