@@ -8,6 +8,7 @@ from discord.errors import NotFound
 import random
 import json
 import re
+import os
 from threading import Timer
 from collections import defaultdict
 
@@ -209,29 +210,28 @@ class Map:
         self.emoji = emoji
         self.image_url = image_url
 
-IMAGE_FOLDER = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
+
+URL_PATH = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
+IMAGE_PATH = 'assets/maps/images/'
 MAPS = []
+
 
 def check_json_file():
     global MAPS
+    file_names = os.listdir(IMAGE_PATH)
+    map_names = [name.split(':')[0] for name in file_names]
+    dev_names = [dev.split(':')[1].split('.')[0] for dev in file_names]
 
     with open('maps_data.json', 'r') as f:
         data = json.load(f)
-        
-    MAPS = [
-        Map('Cache',        'de_cache',     '<:de_cache:'    + str(data['de_cache'])    + '>', f'{IMAGE_FOLDER}de_cache.jpg'),
-        Map('Cobblestone',  'de_cbble',     '<:de_cbble:'    + str(data['de_cbble'])    + '>', f'{IMAGE_FOLDER}de_cbble.jpg'),
-        Map('Dust II',      'de_dust2',     '<:de_dust2:'    + str(data['de_dust2'])    + '>', f'{IMAGE_FOLDER}de_dust2.jpg'),
-        Map('Inferno',      'de_inferno',   '<:de_inferno:'  + str(data['de_inferno'])  + '>', f'{IMAGE_FOLDER}de_inferno.jpg'),
-        Map('Mirage',       'de_mirage',    '<:de_mirage:'   + str(data['de_mirage'])   + '>', f'{IMAGE_FOLDER}de_mirage.jpg'),
-        Map('Nuke',         'de_nuke',      '<:de_nuke:'     + str(data['de_nuke'])     + '>', f'{IMAGE_FOLDER}de_nuke.jpg'),
-        Map('Overpass',     'de_overpass',  '<:de_overpass:' + str(data['de_overpass']) + '>', f'{IMAGE_FOLDER}de_overpass.jpg'),
-        Map('Train',        'de_train',     '<:de_train:'    + str(data['de_train'])    + '>', f'{IMAGE_FOLDER}de_train.jpg'),
-        Map('Vertigo',      'de_vertigo',   '<:de_vertigo:'  + str(data['de_vertigo'])  + '>', f'{IMAGE_FOLDER}de_vertigo.jpg')
-    ]
+
+    for i, m in enumerate(dev_names):
+        MAPS.append(Map(map_names[i], m, f'<:{m}:{data[m]}>', f'{URL_PATH}{m}.jpg'))
+
 
 timer = Timer(10, check_json_file)
 timer.start()
+
 
 class MapDraftMenu(discord.Message):
     """ Message containing the components for a map draft. """
@@ -248,7 +248,7 @@ class MapDraftMenu(discord.Message):
             setattr(self, attr_name, attr_val)
 
         # Add custom attributes 
-        self.bot = bot      
+        self.bot = bot
         self.ban_order = '12121212'
         self.captains = None
         self.map_pool = None
@@ -385,7 +385,7 @@ class MapVoteMenu(discord.Message):
             self.map_votes[str(reaction)] += 1
         except KeyError:
             return
-            
+
         self.voted_users.add(user)
 
         # Check if the voting is over
@@ -443,9 +443,8 @@ class MapVoteMenu(discord.Message):
 
         if len(winners_emoji) == 1:
             return [m for m in winners_maps if m.emoji == winners_emoji[0]][0]
-        else:           
+        else:
             return await self.vote(winners_maps)
-
 
 
 class MatchCog(commands.Cog):
@@ -513,11 +512,11 @@ class MatchCog(commands.Cog):
         """"""
         menu = MapVoteMenu(message, self.bot, users)
         voted_map = await menu.vote(mpool)
-        return voted_map        
+        return voted_map
 
-    async def random_map(self, guild, mpool):
+    async def random_map(self, mpool):
         """"""
-        return random.choice(mpool)        
+        return random.choice(mpool)
 
     async def setup_match_channels(self, guild, match_id, team_one, team_two):
         """Create teams voice channels and move players inside"""
@@ -529,13 +528,13 @@ class MatchCog(commands.Cog):
         role = discord.utils.get(guild.roles, name='@everyone')
 
         voice_channel_one = await guild.create_voice_channel(name=f'Team {team1_name}',
-                                                                 category=match_category,
-                                                                 user_limit=len(team_one))
+                                                             category=match_category,
+                                                             user_limit=len(team_one))
         await voice_channel_one.set_permissions(role, connect=False, read_messages=True)
 
         voice_channel_two = await guild.create_voice_channel(name=f'Team {team2_name}',
-                                                                 category=match_category,
-                                                                 user_limit=len(team_two))
+                                                             category=match_category,
+                                                             user_limit=len(team_two))
         await voice_channel_two.set_permissions(role, connect=False, read_messages=True)
 
         if guild not in self.match_dict:
@@ -572,8 +571,8 @@ class MatchCog(commands.Cog):
         role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
 
         voice_channel_end = await voice_lobby.guild.create_voice_channel(name=f'Match ID {matchid}',
-                                                                                 category=ended_match[0],
-                                                                                 user_limit=len(match_players))
+                                                                         category=ended_match[0],
+                                                                         user_limit=len(match_players))
         await voice_channel_end.set_permissions(role, connect=False, read_messages=True)
 
         for player in match_players:
@@ -601,7 +600,7 @@ class MatchCog(commands.Cog):
         channel_id = await self.bot.get_guild_data(message.guild, 'text_results')
         if message.channel.id != channel_id:
             return
-            
+
         panel_url = f'{self.bot.api_helper.base_url}/match/'
         if panel_url not in message.embeds[0].description:
             return
@@ -709,18 +708,19 @@ class MatchCog(commands.Cog):
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(ready_message, mpool, members)
             elif map_method == 'random':
-                map_pick = await self.random_map(ctx.guild, mpool)
+                map_pick = await self.random_map(mpool)
             else:
                 raise ValueError(self.bot.translate('map-method-not-valid').format(map_method))
 
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
             await ready_message.edit(embed=burst_embed)
-            
+
             self.moving_players[ctx.guild] = True
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.name)  # Request match from API
+                match = await self.bot.api_helper.start_match(team_one, team_two,
+                                                              map_pick.dev_name)  # Request match from API
             except aiohttp.ClientResponseError:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
@@ -732,7 +732,8 @@ class MatchCog(commands.Cog):
             else:
                 await asyncio.sleep(5)
                 match_id = str(match.get_match_id)
-                description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command, map_pick.name, match_id)
+                description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command,
+                                                                          map_pick.name, match_id)
                 burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
                 burst_embed.add_field(name=self.bot.translate('team-name').format(team_one[0].display_name),
@@ -771,7 +772,8 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('set-team-method').format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, team_method=method)
             else:
-                title = self.bot.translate('team-valid-methods').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = self.bot.translate('team-valid-methods').format(valid_methods[0], valid_methods[1],
+                                                                        valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -799,7 +801,8 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('set-captains-method').format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, captain_method=method)
             else:
-                title = self.bot.translate('captains-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = self.bot.translate('captains-valid-method').format(valid_methods[0], valid_methods[1],
+                                                                           valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -826,7 +829,8 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('set-map-method').format(method)
                 await self.bot.db_helper.update_guild(ctx.guild.id, map_method=method)
             else:
-                title = self.bot.translate('map-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = self.bot.translate('map-valid-method').format(valid_methods[0], valid_methods[1],
+                                                                      valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -837,8 +841,8 @@ class MatchCog(commands.Cog):
     async def mpool(self, ctx, *args):
         """ Edit the guild's map pool for map drafts. """
         if not await self.bot.isValidChannel(ctx):
-            return 
-                   
+            return
+
         map_pool = [m.dev_name for m in MAPS if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
         if len(args) == 0:
@@ -880,7 +884,7 @@ class MatchCog(commands.Cog):
         inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in MAPS if m.dev_name not in map_pool)
 
         if not inactive_maps:
-            inactive_maps = self.bot.translate('none') # '*None*'
+            inactive_maps = self.bot.translate('none')
 
         embed.add_field(name=self.bot.translate('active-maps'), value=active_maps)
         embed.add_field(name=self.bot.translate('inactive-maps'), value=inactive_maps)
@@ -889,7 +893,6 @@ class MatchCog(commands.Cog):
     @teams.error
     @captains.error
     @maps.error
-    #@cancel.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):

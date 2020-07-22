@@ -99,6 +99,7 @@ class LeagueBot(commands.AutoShardedBot):
         icons = os.listdir(path)
         data = {}
         emojis = [e.name for e in self.guilds[0].emojis]
+        
         for icon in icons:
             map_name = icon.split('.')[0]
             if map_name not in emojis:
@@ -107,7 +108,7 @@ class LeagueBot(commands.AutoShardedBot):
             else:
                 emoji = get(self.guilds[0].emojis, name=map_name)
 
-            data[map_name] = emoji.id
+            data[map_name] = str(emoji.id)
                 
             with open('maps_data.json', 'w+') as f:
                 json.dump(data, f)
@@ -146,7 +147,8 @@ class LeagueBot(commands.AutoShardedBot):
                 text_channel_results = get(guild.channels, name=self.str_text_results)
 
             if self.str_voice_lobby not in channels:
-                voice_channel_lobby = await guild.create_voice_channel(name=self.str_voice_lobby, category=categ, user_limit=10)
+                voice_channel_lobby = await guild.create_voice_channel(name=self.str_voice_lobby, category=categ,
+                                                                       user_limit=10)
             else:
                 voice_channel_lobby = get(guild.channels, name=self.str_voice_lobby)
 
