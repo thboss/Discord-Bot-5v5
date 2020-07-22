@@ -31,27 +31,27 @@
 
 5. Create an environment file named `.env` with in the repository's root directory. Fill this template with the requisite information you've gathered...
 
-    ```c
-    DISCORD_BOT_TOKEN= //Bot token from the Discord developer portal
+    ```py
+    DISCORD_BOT_TOKEN= #Bot token from the Discord developer portal
 
-    // NOTE: Bot automatically create required channels/emojis/role
+    # NOTE: Bot automatically create required channels/emojis/role
 
-    DISCORD_LEAGUE_CATEGORY= // League category name
-    DISCORD_LEAGUE_ROLE= // League role name
-    DISCORD_LEAGUE_TEXT_QUEUE= // League queue channel name
-    DISCORD_LEAGUE_TEXT_COMMANDS= // League commands channel name
-    DISCORD_LEAGUE_TEXT_RESULT= // League results channel name
-    DISCORD_LEAGUE_VOICE_LOBBY= // League lobby voice channel name
+    DISCORD_LEAGUE_CATEGORY= # League category name
+    DISCORD_LEAGUE_ROLE= # League role name
+    DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name
+    DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name
+    DISCORD_LEAGUE_TEXT_RESULT= # League results channel name
+    DISCORD_LEAGUE_VOICE_LOBBY= # League lobby voice channel name
 
-    DISCORD_LEAGUE_LANGUAGE=en // Bot language
+    DISCORD_LEAGUE_LANGUAGE=en # Bot language
 
-    CSGO_LEAGUE_API_KEY= // API from the CS:GO League web backend .env file
-    CSGO_LEAGUE_API_URL= // URL where the web panel is hosted
+    CSGO_LEAGUE_API_KEY= # API from the CS:GO League web backend .env file
+    CSGO_LEAGUE_API_URL= # URL where the web panel is hosted
 
-    POSTGRESQL_USER= // "csgoleague" (if you used the same username)
-    POSTGRESQL_PASSWORD= // The DB password you set
-    POSTGRESQL_DB= // "csgoleague" (if you used the same DB name)
-    POSTGRESQL_HOST= // The IP address of the DB server (127.0.0.1 if running on the same system as the bot)
+    POSTGRESQL_USER= # "csgoleague" (if you used the same username)
+    POSTGRESQL_PASSWORD= # The DB password you set
+    POSTGRESQL_DB= # "csgoleague" (if you used the same DB name)
+    POSTGRESQL_HOST= # The IP address of the DB server (127.0.0.1 if running on the same system as the bot)
     ```
 
 
