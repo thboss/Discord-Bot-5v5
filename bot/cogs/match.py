@@ -687,7 +687,7 @@ class MatchCog(commands.Cog):
             try:
                 match = await self.bot.api_helper.start_match(team_one, team_two,
                                                               map_pick.dev_name)  # Request match from API
-            except aiohttp.ClientResponseError:
+            except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
                 await ready_message.delete()
