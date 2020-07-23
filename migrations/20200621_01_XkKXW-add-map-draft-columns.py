@@ -1,8 +1,26 @@
 # 20200621_01_XkKXW-add-map-draft-columns.py
 
 from yoyo import step
+import os
 
 __depends__ = {'20200513_01_kPWNp-create-base-tables'}
+ 
+maps = [icon.split('-')[1].split('.')[0] for icon in os.listdir('assets/maps/icons/')]
+add_maps = 'ALTER TABLE guilds\n'
+drop_maps = 'ALTER TABLE guilds\n'
+
+for i, _map in enumerate(maps):
+    if i+1 != len(maps):
+        add_maps += f'ADD COLUMN {_map} BOOL NOT NULL DEFAULT true,\n'
+    else:
+        add_maps += f'ADD COLUMN {_map} BOOL NOT NULL DEFAULT true;'
+
+for i, _map in enumerate(maps):
+    if i+1 != len(maps):
+        drop_maps += f'DROP COLUMN {_map},\n'
+    else:
+        drop_maps += f'DROP COLUMN {_map};'
+
 
 steps = [
     step(
@@ -21,28 +39,10 @@ steps = [
     ),
     step(
         (
-            'ALTER TABLE guilds\n'
-            'ADD COLUMN de_cache BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_cbble BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_dust2 BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_mirage BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_overpass BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_nuke BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_inferno BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_train BOOL NOT NULL DEFAULT true,\n'
-            'ADD COLUMN de_vertigo BOOL NOT NULL DEFAULT true;'
+            add_maps
         ),
         (
-            'ALTER TABLE guilds\n'
-            'DROP COLUMN de_cache,\n'
-            'DROP COLUMN de_cbble,\n'
-            'DROP COLUMN de_dust2,\n'
-            'DROP COLUMN de_mirage,\n'
-            'DROP COLUMN de_overpass,\n'
-            'DROP COLUMN de_nuke,\n'
-            'DROP COLUMN de_inferno,\n'
-            'DROP COLUMN de_train,\n'
-            'DROP COLUMN de_vertigo;'
+            drop_maps
         )
     )
 ]
