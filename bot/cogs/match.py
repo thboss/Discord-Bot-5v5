@@ -8,8 +8,6 @@ from discord.errors import NotFound
 import random
 import json
 import re
-import os
-from threading import Timer
 from collections import defaultdict
 
 
@@ -198,39 +196,6 @@ class TeamDraftMenu(discord.Message):
         self.bot.remove_listener(self._process_pick, name='on_reaction_add')
 
         return self.teams
-
-
-class Map:
-    """ A group of attributes representing a map. """
-
-    def __init__(self, name, dev_name, emoji, image_url):
-        """ Set attributes. """
-        self.name = name
-        self.dev_name = dev_name
-        self.emoji = emoji
-        self.image_url = image_url
-
-
-URL_PATH = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
-IMAGE_PATH = 'assets/maps/images/'
-MAPS = []
-
-
-def check_json_file():
-    global MAPS
-    file_names = os.listdir(IMAGE_PATH)
-    map_names = [name.split('-')[0] for name in file_names]
-    dev_names = [dev.split('-')[1].split('.')[0] for dev in file_names]
-
-    with open('maps_data.json', 'r') as f:
-        data = json.load(f)
-
-    for i, m in enumerate(dev_names):
-        MAPS.append(Map(map_names[i], m, f'<:{m}:{data[m]}>', f'{URL_PATH}{m}.jpg'))
-
-
-timer = Timer(10, check_json_file)
-timer.start()
 
 
 class MapDraftMenu(discord.Message):
@@ -433,7 +398,7 @@ class MapVoteMenu(discord.Message):
             elif votes == winners_votes:
                 winners_emoji.append(emoji)
 
-        self.map_pool = [m for m in MAPS if m.emoji in winners_emoji]
+        self.map_pool = [m for m in self.bot.maps if m.emoji in winners_emoji]
         winners_maps = self.map_pool.copy()
 
         self.map_votes = None
@@ -690,7 +655,7 @@ class MatchCog(commands.Cog):
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
             team_method = results[1]['team_method']
             map_method = results[1]['map_method']
-            mpool = [m for m in MAPS if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
+            mpool = [m for m in self.bot.maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
             if team_method == 'autobalance':
                 team_one, team_two = await self.autobalance_teams(members)
@@ -843,7 +808,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_pool = [m.dev_name for m in MAPS if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
+        map_pool = [m.dev_name for m in self.bot.maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
         if len(args) == 0:
             embed = self.bot.embed_template(title=self.bot.translate('map-pool'))
@@ -853,7 +818,7 @@ class MatchCog(commands.Cog):
 
             for arg in args:
                 map_name = arg[1:]  # Remove +/- prefix
-                map_obj = next((m for m in MAPS if m.dev_name == map_name), None)
+                map_obj = next((m for m in self.bot.maps if m.dev_name == map_name), None)
 
                 if map_obj is None:
                     description += '\u2022 ' + self.bot.translate('could-not-interpret').format(arg)
@@ -872,7 +837,7 @@ class MatchCog(commands.Cog):
             if len(map_pool) < 3:
                 description = self.bot.translate('map-pool-fewer-3')
             else:
-                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in MAPS}
+                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.maps}
                 await self.bot.db_helper.update_guild(ctx.guild.id, **map_pool_data)
 
             embed = self.bot.embed_template(title=self.bot.translate('modified-map-pool'), description=description)
@@ -880,8 +845,8 @@ class MatchCog(commands.Cog):
             if any_wrong_arg:  # Add example usage footer if command was used incorrectly
                 embed.set_footer(text=f'Ex: {self.bot.command_prefix[0]}mpool +de_cache -de_mirage')
 
-        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in MAPS if m.dev_name in map_pool)
-        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in MAPS if m.dev_name not in map_pool)
+        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.maps if m.dev_name in map_pool)
+        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.maps if m.dev_name not in map_pool)
 
         if not inactive_maps:
             inactive_maps = self.bot.translate('none')

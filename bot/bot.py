@@ -14,6 +14,16 @@ import sys
 import traceback
 import os
 
+class Map:
+    """ A group of attributes representing a map. """
+
+    def __init__(self, name, dev_name, emoji, image_url):
+        """ Set attributes. """
+        self.name = name
+        self.dev_name = dev_name
+        self.emoji = emoji
+        self.image_url = image_url
+
 
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
@@ -36,6 +46,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.str_voice_lobby = str_voice_lobby
         self.language = language
         self.db_pool = db_pool
+        self.maps = []
 
         with open('translations.json', 'r') as f:
             self.translations = json.load(f)
@@ -95,23 +106,21 @@ class LeagueBot(commands.AutoShardedBot):
 
     async def setup_emojis(self):
         """ Upload custom map emojis to guilds. """
-        path = 'assets/maps/icons/'
-        icons = os.listdir(path)
-        data = {}
+        url_path = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
+        icons_path = 'assets/maps/icons/'     
+        icons = os.listdir(icons_path)
         emojis = [e.name for e in self.guilds[0].emojis]
         
         for icon in icons:
-            map_name = icon.split('.')[0]
-            if map_name not in emojis:
-                with open(path + icon, 'rb') as image:
-                    emoji = await self.guilds[0].create_custom_emoji(name=map_name, image=image.read())
+            emoji_name = icon.split('-')[0]
+            emoji_dev = icon.split('-')[1].split('.')[0]
+            if emoji_dev not in emojis:
+                with open(icons_path + icon, 'rb') as image:
+                    emoji = await self.guilds[0].create_custom_emoji(name=emoji_dev, image=image.read())
             else:
-                emoji = get(self.guilds[0].emojis, name=map_name)
+                emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-            data[map_name] = str(emoji.id)
-                
-            with open('maps_data.json', 'w+') as f:
-                json.dump(data, f)
+            self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{emoji_dev}.jpg'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
