@@ -8,6 +8,7 @@ from discord.errors import NotFound
 import random
 import json
 import re
+import traceback
 from collections import defaultdict
 
 
@@ -693,6 +694,7 @@ class MatchCog(commands.Cog):
                 self.dict_ready_message.pop(ctx.guild)
                 await ctx.guild.channels[index_channel].send(embed=burst_embed)
                 self.moving_players[ctx.guild] = False
+                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
                 await asyncio.sleep(5)
