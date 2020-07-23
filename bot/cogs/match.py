@@ -8,6 +8,7 @@ from discord.errors import NotFound
 import random
 import json
 import re
+import sys
 import traceback
 from collections import defaultdict
 
