@@ -107,20 +107,21 @@ class LeagueBot(commands.AutoShardedBot):
     async def setup_emojis(self):
         """ Upload custom map emojis to guilds. """
         url_path = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
-        icons_path = 'assets/maps/icons/'     
-        icons = os.listdir(icons_path)
+        icons_dic = 'assets/maps/icons/'     
+        icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
         
         for icon in icons:
-            emoji_name = icon.split('-')[0]
-            emoji_dev = icon.split('-')[1].split('.')[0]
-            if emoji_dev not in emojis:
-                with open(icons_path + icon, 'rb') as image:
-                    emoji = await self.guilds[0].create_custom_emoji(name=emoji_dev, image=image.read())
-            else:
-                emoji = get(self.guilds[0].emojis, name=emoji_dev)
+            if icon.endswith('.png') and '-' in icon and os.stat(icons_dic + icon).st_size < 256000:
+                emoji_name = icon.split('-')[0]
+                emoji_dev = icon.split('-')[1].split('.')[0]
+                if emoji_dev not in emojis:
+                    with open(icons_dic + icon, 'rb') as image:
+                        emoji = await self.guilds[0].create_custom_emoji(name=emoji_dev, image=image.read())
+                else:
+                    emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-            self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{emoji_dev}.jpg'))
+                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{emoji_dev}.jpg'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
