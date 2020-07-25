@@ -659,12 +659,12 @@ class MatchCog(commands.Cog):
             map_method = results[1]['map_method']
             mpool = [m for m in self.bot.maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
-            if team_method == 'autobalance':
+            if team_method == 'random' or len(members) == 2:
+                team_one, team_two = await self.randomize_teams(members)
+            elif team_method == 'autobalance':
                 team_one, team_two = await self.autobalance_teams(members)
             elif team_method == 'captains':
                 team_one, team_two = await self.draft_teams(ready_message, members)
-            elif team_method == 'random':
-                team_one, team_two = await self.randomize_teams(members)
             else:
                 raise ValueError(self.bot.translate('team-method-not-valid').format(team_method))
 
