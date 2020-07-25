@@ -537,16 +537,15 @@ class MatchCog(commands.Cog):
         team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
         team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
 
-        match_category = await guild.create_category_channel(
-            self.bot.translate('team-vs-team').format(team1_name, team2_name))
+        match_category = await guild.create_category_channel(self.bot.translate('match-id').format(match_id))
         role = discord.utils.get(guild.roles, name='@everyone')
 
-        voice_channel_one = await guild.create_voice_channel(name=f'Team {team1_name}',
+        voice_channel_one = await guild.create_voice_channel(name=self.bot.translate('team').format(team1_name),
                                                              category=match_category,
                                                              user_limit=len(team_one))
         await voice_channel_one.set_permissions(role, connect=False, read_messages=True)
 
-        voice_channel_two = await guild.create_voice_channel(name=f'Team {team2_name}',
+        voice_channel_two = await guild.create_voice_channel(name=self.bot.translate('team').format(team2_name),
                                                              category=match_category,
                                                              user_limit=len(team_two))
         await voice_channel_two.set_permissions(role, connect=False, read_messages=True)
@@ -746,14 +745,16 @@ class MatchCog(commands.Cog):
                 return False
             else:
                 await asyncio.sleep(5)
+                team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
+                team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name                
                 match_id = str(match.get_match_id)
                 description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command,
                                                                           map_pick.name, map_pick.emoji, match_id)
                 burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
-                burst_embed.add_field(name=self.bot.translate('team-name').format(team_one[0].display_name),
+                burst_embed.add_field(name=self.bot.translate('team').format(team1_name),
                                       value='\n'.join(member.mention for member in team_one))
-                burst_embed.add_field(name=self.bot.translate('team-name').format(team_two[0].display_name),
+                burst_embed.add_field(name=self.bot.translate('team').format(team2_name),
                                       value='\n'.join(member.mention for member in team_two))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
