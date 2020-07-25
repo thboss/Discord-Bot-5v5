@@ -49,11 +49,25 @@ class TeamDraftMenu(discord.Message):
                          u'\u0039\u20E3',
                          u'\U0001F51F']
         self.pick_emojis = dict(zip(emoji_numbers, members))
+        self.pick_order = '12211221'
+        self.pick_number = None
         self.members_left = None
         self.teams = None
         self.future = None
-        self.picking_count = 0
-        self.picking_order = 'ABBAABBAAB'
+
+    @property
+    def _active_picker(self):
+        """ Get the active picker using the pick order and nummber. """
+        if self.pick_number is None:
+            return None
+
+        picking_team_number = int(self.pick_order[self.pick_number])
+        picking_team = self.teams[picking_team_number - 1]  # Subtract 1 to get team's index
+
+        if len(picking_team) == 0:
+            return None
+
+        return picking_team[0]        
 
     def _picker_embed(self, title):
         """ Generate the menu embed based on the current status of the team draft. """
@@ -82,6 +96,39 @@ class TeamDraftMenu(discord.Message):
         return embed
 
     def _pick_player(self, picker, pickee):
+        """ Process a team captain's player pick, assuming the picker is in the team draft. """
+        # Get picking team
+        if self.teams[0] == []:
+            picking_team = self.teams[0]
+            self.members_left.remove(picker)
+            picking_team.append(picker)
+        elif self.teams[1] == [] and picker != self.teams[0][0]:
+            picking_team = self.teams[1]
+            self.members_left.remove(picker)
+            picking_team.append(picker)
+        elif picker == self.teams[0][0]:
+            picking_team = self.teams[0]
+        elif picker == self.teams[1][0]:
+            picking_team = self.teams[1]
+        else:
+            raise PickError(f'Picker {picker.display_name} is not a team captain')
+
+        # Check if it's picker's turn
+        if picker != self._active_picker:
+            raise PickError(f'It is not {picker.display_name}\'s turn to pick')
+
+        # Prevent picks when team is full
+        if len(picking_team) > len(self.members) // 2:
+            raise PickError(f'Team {picker.display_name} is full')
+
+        # Add pickee to team if user didn't pick themselves (which is only possible picking first as a volunteer)
+        if not picker == pickee:
+            self.members_left.remove(pickee)
+            picking_team.append(pickee)
+            self.pick_number += 1
+
+
+    '''def _pick_player(self, picker, pickee):
         """ Process a team captain's player pick. """
         if any(team == [] for team in self.teams) and picker in self.members:
             picking_team = self.teams[self.teams.index([])]  # Get the first empty team
@@ -115,7 +162,7 @@ class TeamDraftMenu(discord.Message):
         if not picker == pickee:
             self.members_left.remove(pickee)
             picking_team.append(pickee)
-            self.picking_count += 1
+            self.picking_count += 1'''
 
     async def _update_menu(self, title):
         """ Update the message to reflect the current status of the team draft. """
@@ -259,10 +306,10 @@ class MapDraftMenu(discord.Message):
         awaitables = [self.clear_reaction(m.emoji) for m in self.map_pool if m.emoji not in self.maps_left]
         await asyncio.gather(*awaitables, loop=self.bot.loop)
 
-    async def _process_ban(self, reaction, user):
+    async def _process_ban(self, reaction, member):
         """ Handler function for map ban reactions. """
         # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or user != self._active_picker:
+        if reaction.message.id != self.id or member != self._active_picker:
             return
 
         # Ban map if the emoji is valid
@@ -280,7 +327,7 @@ class MapDraftMenu(discord.Message):
 
             return
 
-        await self._update_menu(self.bot.translate('user-banned-map').format(user.display_name, map_ban.name))
+        await self._update_menu(self.bot.translate('user-banned-map').format(member.display_name, map_ban.name))
 
     async def draft(self, pool, captain_1, captain_2):
         """ Start the team draft and return the teams after it's finished. """
@@ -320,7 +367,7 @@ class MapDraftMenu(discord.Message):
 class MapVoteMenu(discord.Message):
     """ Message containing the components for a map draft. """
 
-    def __init__(self, message, bot, users):
+    def __init__(self, message, bot, members):
         """ Copy constructor from a message and specific team draft args. """
         # Copy all attributes from message object
         for attr_name in message.__slots__:
@@ -333,36 +380,36 @@ class MapVoteMenu(discord.Message):
 
         # Add custom attributes
         self.bot = bot
-        self.users = users
-        self.voted_users = None
+        self.members = members
+        self.voted_members = None
         self.map_pool = None
         self.map_votes = None
         self.future = None
 
-    async def _process_vote(self, reaction, user):
+    async def _process_vote(self, reaction, member):
         """"""
         # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or user not in self.users:
+        if reaction.message.id != self.id or member not in self.members:
             return
 
         # Add map vote if it is valid
-        if user in self.voted_users:
+        if member in self.voted_members:
             return
         try:
             self.map_votes[str(reaction)] += 1
         except KeyError:
             return
 
-        self.voted_users.add(user)
+        self.voted_members.add(member)
 
         # Check if the voting is over
-        if len(self.voted_users) == len(self.users):
+        if len(self.voted_members) == len(self.members):
             if self.future is not None:
                 self.future.set_result(None)
 
     async def vote(self, mpool):
         """"""
-        self.voted_users = set()
+        self.voted_members = set()
         self.map_pool = mpool
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
         description = '\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool)
@@ -404,7 +451,7 @@ class MapVoteMenu(discord.Message):
         winners_maps = self.map_pool.copy()
 
         self.map_votes = None
-        self.voted_users = None
+        self.voted_members = None
         self.future = None
         self.map_pool = None
 
@@ -475,9 +522,9 @@ class MatchCog(commands.Cog):
         map_pick = await menu.draft(mpool, captain_1, captain_2)
         return map_pick
 
-    async def vote_maps(self, message, mpool, users):
+    async def vote_maps(self, message, mpool, members):
         """"""
-        menu = MapVoteMenu(message, self.bot, users)
+        menu = MapVoteMenu(message, self.bot, members)
         voted_map = await menu.vote(mpool)
         return voted_map
 
