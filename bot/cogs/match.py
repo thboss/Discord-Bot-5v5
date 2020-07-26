@@ -617,6 +617,9 @@ class MatchCog(commands.Cog):
         panel_url = f'{self.bot.api_helper.base_url}/match/'
         if panel_url not in message.embeds[0].description:
             return
+            
+        if '0:0' in message.embeds[0].author.name:
+            return
 
         match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
 
