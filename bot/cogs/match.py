@@ -555,8 +555,8 @@ class MatchCog(commands.Cog):
 
         self.match_dict[guild][match_id] = [match_category, voice_channel_one, voice_channel_two, team_one, team_two]
 
-        channel_id = await self.bot.get_guild_data(guild, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(channel_id)
+        vc_id = await self.bot.get_guild_data(guild, 'voice_lobby')
+        voice_lobby = self.bot.get_channel(vc_id)
 
         for t1_player in range(len(team_one)):
             await voice_channel_one.set_permissions(team_one[t1_player], connect=True)
@@ -576,8 +576,8 @@ class MatchCog(commands.Cog):
 
     async def delete_match_channels(self, message, matchid):
         """ Move players to another channels and remove voice channels on match end. """
-        channel_id = await self.bot.get_guild_data(message.guild, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(channel_id)
+        vc_id = await self.bot.get_guild_data(message.guild, 'voice_lobby')
+        voice_lobby = self.bot.get_channel(vc_id)
         ended_match = self.match_dict[message.guild][matchid]
         match_players = ended_match[3] + ended_match[4]
 
@@ -610,8 +610,8 @@ class MatchCog(commands.Cog):
         if len(message.embeds) < 1:
             return
 
-        channel_id = await self.bot.get_guild_data(message.guild, 'text_results')
-        if message.channel.id != channel_id:
+        results_channel_id = await self.bot.get_guild_data(message.guild, 'text_results')
+        if message.channel.id != results_channel_id:
             return
 
         panel_url = f'{self.bot.api_helper.base_url}/match/'
@@ -746,12 +746,14 @@ class MatchCog(commands.Cog):
             else:
                 await asyncio.sleep(5)
                 team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
-                team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name                
+                team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
+                icons_url = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/icons/'
                 match_id = str(match.get_match_id)
-                description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command,
-                                                                          map_pick.name, map_pick.emoji, match_id)
-                burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
-                burst_embed.set_thumbnail(url=map_pick.image_url)
+                match_url = f'{self.bot.api_helper.base_url}/match/{match_id}'
+                description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command)
+                burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready').format(), description=description)
+                burst_embed.set_author(name=f'Match #{match_id}', url=match_url)
+                burst_embed.set_thumbnail(url=f'{icons_url}{map_pick.dev_name}.png')
                 burst_embed.add_field(name=self.bot.translate('team').format(team1_name),
                                       value='\n'.join(member.mention for member in team_one))
                 burst_embed.add_field(name=self.bot.translate('team').format(team2_name),
