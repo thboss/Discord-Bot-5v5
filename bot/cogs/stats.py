@@ -48,18 +48,18 @@ class StatsCog(commands.Cog):
             hs_percent_str = f'{player.hs_percent * 100:.2f}%'
             fb_percent_str = f'{player.first_blood_rate * 100:.2f}%'
             description = '```ml\n' \
-                          f' RankMe Score:      {player.score:>6} \n' \
-                          f' Matches Played:    {player.matches_played:>6} \n' \
-                          f' Win Percentage:    {win_percent_str:>6} \n' \
-                          f' KD Ratio:          {player.kd_ratio:>6.2f} \n' \
-                          f' ADR:               {player.adr:>6.2f} \n' \
-                          f' HS Percentage:     {hs_percent_str:>6} \n' \
-                          f' First Blood Rate:  {fb_percent_str:>6} ' \
+                          f' {self.bot.translate("rank-score")}:      {player.score:>6} \n' \
+                          f' {self.bot.translate("matches-played")}:    {player.matches_played:>6} \n' \
+                          f' {self.bot.translate("win-percentage")}:    {win_percent_str:>6} \n' \
+                          f' {self.bot.translate("kd-ratio")}:          {player.kd_ratio:>6.2f} \n' \
+                          f' {self.bot.translate("adr")}:               {player.adr:>6.2f} \n' \
+                          f' {self.bot.translate("hs-percentage")}:     {hs_percent_str:>6} \n' \
+                          f' {self.bot.translate("first-blood-rate")}:  {fb_percent_str:>6} ' \
                           '```'
             embed = self.bot.embed_template(description=description)
-            embed.set_author(name=user.display_name, url=player.steam_profile, icon_url=user.avatar_url_as(size=128))
+            embed.set_author(name=user.display_name, url=player.league_profile, icon_url=user.avatar_url_as(size=128))
         else:
-            title = f'Unable to get **{ctx.author.display_name}**\'s stats: Their account not linked'
+            title = self.bot.translate("cannot-get-stats").format(ctx.author.display_name)
             embed = self.bot.embed_template(title=title)
 
         await ctx.send(embed=embed)
@@ -74,7 +74,7 @@ class StatsCog(commands.Cog):
         guild_players = await self.bot.api_helper.get_players([user.id for user in ctx.guild.members])
 
         if len(guild_players) == 0:
-            embed = self.bot.embed_template(title='Nobody on this server is ranked!')
+            embed = self.bot.embed_template(title=self.bot.translate("nobody-ranked"))
             await ctx.send(embed=embed)
 
         guild_players.sort(key=lambda u: (u.score, u.matches_played), reverse=True)
@@ -102,6 +102,6 @@ class StatsCog(commands.Cog):
         description += '```'
 
         # Send leaderboard
-        title = '__CS:GO League Server Leaderboard__'
+        title = f'__{self.bot.translate("server-leaderboard")}__'
         embed = self.bot.embed_template(title=title, description=description)
         await ctx.send(embed=embed)

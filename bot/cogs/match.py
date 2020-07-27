@@ -75,7 +75,7 @@ class TeamDraftMenu(discord.Message):
         embed.set_footer(text=self.bot.translate('team-pick-footer'))
 
         for team in self.teams:
-            team_name = '__Team__' if len(team) == 0 else f'__Team {team[0].display_name}__'
+            team_name = f'__{self.bot.translate("team")}__' if len(team) == 0 else f'__{self.bot.translate("team")} {team[0].display_name}__'
 
             if len(team) == 0:
                 team_players = self.bot.translate('empty')
@@ -97,6 +97,7 @@ class TeamDraftMenu(discord.Message):
 
     def _pick_player(self, picker, pickee):
         """ Process a team captain's player pick, assuming the picker is in the team draft. """
+        picker_name = picker.nick if picker.nick is not None else picker.display_name
         # Get picking team
         if self.teams[0] == []:
             picking_team = self.teams[0]
@@ -111,58 +112,21 @@ class TeamDraftMenu(discord.Message):
         elif picker == self.teams[1][0]:
             picking_team = self.teams[1]
         else:
-            raise PickError(f'Picker {picker.display_name} is not a team captain')
+            raise PickError(self.bot.translate('picker-not-captain').format(picker_name))
 
         # Check if it's picker's turn
         if picker != self._active_picker:
-            raise PickError(f'It is not {picker.display_name}\'s turn to pick')
+            raise PickError(self.bot.translate('picker-not-turn').format(picker_name))
 
         # Prevent picks when team is full
         if len(picking_team) > len(self.members) // 2:
-            raise PickError(f'Team {picker.display_name} is full')
+            raise PickError(self.bot.translate('team-full').format(picker_name))
 
         # Add pickee to team if user didn't pick themselves (which is only possible picking first as a volunteer)
         if not picker == pickee:
             self.members_left.remove(pickee)
             picking_team.append(pickee)
             self.pick_number += 1
-
-
-    '''def _pick_player(self, picker, pickee):
-        """ Process a team captain's player pick. """
-        if any(team == [] for team in self.teams) and picker in self.members:
-            picking_team = self.teams[self.teams.index([])]  # Get the first empty team
-            if picker == pickee:
-                raise PickError(self.bot.translate('picker-pick-self').format(picker.display_name))
-            elif len(self.teams[0]) == 2 and len(self.teams[1]) == 0 and picker == self.teams[0][0]:
-                raise PickError(self.bot.translate('picker-not-turn').format(picker.display_name))
-            elif picker not in self.members_left:
-                raise PickError(self.bot.translate('picker-not-captain').format(picker.display_name))
-            else:
-                self.members_left.remove(picker)
-            picking_team.append(picker)
-        elif picker == self.teams[0][0]:
-            if self.picking_order[self.picking_count] == 'A':
-                picking_team = self.teams[0]
-            else:
-                raise PickError(self.bot.translate('picker-not-turn').format(picker.display_name))
-        elif picker == self.teams[1][0]:
-            if self.picking_order[self.picking_count] == 'B':
-                picking_team = self.teams[1]
-            else:
-                raise PickError(self.bot.translate('picker-not-turn').format(picker.display_name))
-        elif picker in self.members:
-            raise PickError(self.bot.translate('picker-not-captain').format(picker.display_name))
-        else:
-            raise PickError(self.bot.translate('picker-not-member').format(picker.display_name))
-
-        if len(picking_team) > len(self.members) // 2:  # Team is full
-            raise PickError(self.bot.translate('team-full').format(picker.display_name))
-
-        if not picker == pickee:
-            self.members_left.remove(pickee)
-            picking_team.append(pickee)
-            self.picking_count += 1'''
 
     async def _update_menu(self, title):
         """ Update the message to reflect the current status of the team draft. """
@@ -263,7 +227,7 @@ class MapDraftMenu(discord.Message):
 
         # Add custom attributes 
         self.bot = bot
-        self.ban_order = '12121212'
+        self.ban_order = '12' * 20
         self.captains = None
         self.map_pool = None
         self.maps_left = None
@@ -413,8 +377,8 @@ class MapVoteMenu(discord.Message):
         self.map_pool = mpool
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
         description = '\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool)
-        embed = self.bot.embed_template(title='Map vote started! (1 min)', description=description)
-        embed.set_footer(text='React to either of the map icons below to vote for the corresponding map')
+        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'), description=description)
+        embed.set_footer(text=self.bot.translate('vote-map-footer'))
         await self.edit(embed=embed)
 
         for map_option in self.map_pool:
@@ -537,15 +501,15 @@ class MatchCog(commands.Cog):
         team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
         team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
 
-        match_category = await guild.create_category_channel(self.bot.translate('match-id').format(match_id))
+        match_category = await guild.create_category_channel(f'{self.bot.translate("match")}{match_id}')
         role = discord.utils.get(guild.roles, name='@everyone')
 
-        voice_channel_one = await guild.create_voice_channel(name=self.bot.translate('team').format(team1_name),
+        voice_channel_one = await guild.create_voice_channel(name=f'{self.bot.translate("team")} {team1_name}',
                                                              category=match_category,
                                                              user_limit=len(team_one))
         await voice_channel_one.set_permissions(role, connect=False, read_messages=True)
 
-        voice_channel_two = await guild.create_voice_channel(name=self.bot.translate('team').format(team2_name),
+        voice_channel_two = await guild.create_voice_channel(name=f'{self.bot.translate("team")} {team2_name}',
                                                              category=match_category,
                                                              user_limit=len(team_two))
         await voice_channel_two.set_permissions(role, connect=False, read_messages=True)
@@ -583,24 +547,24 @@ class MatchCog(commands.Cog):
 
         role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
 
-        voice_channel_end = await voice_lobby.guild.create_voice_channel(name=f'Match ID {matchid}',
+        vc_ended_match = await voice_lobby.guild.create_voice_channel(name=f'{self.bot.translate("match")}{matchid}',
                                                                          category=ended_match[0],
                                                                          user_limit=len(match_players))
-        await voice_channel_end.set_permissions(role, connect=False, read_messages=True)
+        await vc_ended_match.set_permissions(role, connect=False, read_messages=True)
 
         for player in match_players:
             await voice_lobby.set_permissions(player, overwrite=None)
 
         for player in match_players:
             try:
-                await player.move_to(voice_channel_end)
+                await player.move_to(vc_ended_match)
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
         await ended_match[1].delete()
         await ended_match[2].delete()
         await asyncio.sleep(60)
-        await voice_channel_end.delete()
+        await vc_ended_match.delete()
         await ended_match[0].delete()
         self.match_dict[message.guild].pop(matchid)
 
@@ -750,16 +714,16 @@ class MatchCog(commands.Cog):
                 await asyncio.sleep(5)
                 team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
                 team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
-                icons_url = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/icons/'
                 match_id = str(match.get_match_id)
                 match_url = f'{self.bot.api_helper.base_url}/match/{match_id}'
                 description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command)
-                burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready').format(), description=description)
-                burst_embed.set_author(name=f'Match #{match_id}', url=match_url)
-                burst_embed.set_thumbnail(url=f'{icons_url}{map_pick.dev_name}.png')
-                burst_embed.add_field(name=self.bot.translate('team').format(team1_name),
+                burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
+
+                burst_embed.set_author(name=f'{self.bot.translate("match")}{match_id}', url=match_url)
+                burst_embed.set_thumbnail(url=map_pick.image_url)
+                burst_embed.add_field(name=f'__{self.bot.translate("team")} {team1_name}__',
                                       value='\n'.join(member.mention for member in team_one))
-                burst_embed.add_field(name=self.bot.translate('team').format(team2_name),
+                burst_embed.add_field(name=f'__{self.bot.translate("team")} {team2_name}__',
                                       value='\n'.join(member.mention for member in team_two))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 

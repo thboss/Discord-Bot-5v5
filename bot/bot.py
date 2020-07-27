@@ -54,7 +54,7 @@ class LeagueBot(commands.AutoShardedBot):
         # Set constants
         self.description = 'An easy to use, fully automated system to set up and play CS:GO pickup games'
         self.color = 0x000000
-        self.activity = discord.Activity(type=discord.ActivityType.watching, name="#how-to-play")
+        self.activity = discord.Activity(type=discord.ActivityType.watching, name="github.com/csgo-league")
 
         # Create session for API
         self.session = aiohttp.ClientSession(loop=self.loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
@@ -106,7 +106,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     async def setup_emojis(self):
         """ Upload custom map emojis to guilds. """
-        url_path = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/images/'
+        url_path = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/icons/'
         icons_dic = 'assets/maps/icons/'     
         icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
@@ -121,7 +121,7 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{emoji_dev}.jpg'))
+                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.split("-")[1]}'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
