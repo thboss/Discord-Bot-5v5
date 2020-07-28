@@ -78,7 +78,7 @@ class TeamDraftMenu(discord.Message):
             team_name = f'__{self.bot.translate("team")}__' if len(team) == 0 else f'__{self.bot.translate("team")} {team[0].display_name}__'
 
             if len(team) == 0:
-                team_players = self.bot.translate('empty')
+                team_players = f'_{self.bot.translate("empty")}_'
             else:
                 team_players = '\n'.join(p.display_name for p in team)
 
@@ -92,7 +92,7 @@ class TeamDraftMenu(discord.Message):
             else:
                 members_left_str += f':heavy_multiplication_x:  ~~{member.display_name}~~\n'
 
-        embed.insert_field_at(1, name=self.bot.translate('players-left'), value=members_left_str)
+        embed.insert_field_at(1, name=f'__{self.bot.translate("players-left")}__', value=members_left_str)
         return embed
 
     def _pick_player(self, picker, pickee):
@@ -260,8 +260,8 @@ class MapDraftMenu(discord.Message):
             status_str += self.bot.translate('map-draft-capt2').format(self.captains[1].mention)
             status_str += self.bot.translate('map-draft-current').format(self._active_picker.mention)
 
-        embed.add_field(name=self.bot.translate('maps-left'), value=maps_str)
-        embed.add_field(name=self.bot.translate('info'), value=status_str)
+        embed.add_field(name=f'__{self.bot.translate("maps-left")}__', value=maps_str)
+        embed.add_field(name=f'__{self.bot.translate("info")}__', value=status_str)
         return embed
 
     async def _update_menu(self, title):
@@ -869,10 +869,10 @@ class MatchCog(commands.Cog):
         inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.maps if m.dev_name not in map_pool)
 
         if not inactive_maps:
-            inactive_maps = self.bot.translate('none')
+            inactive_maps = f'*{self.bot.translate("none")}*'
 
-        embed.add_field(name=self.bot.translate('active-maps'), value=active_maps)
-        embed.add_field(name=self.bot.translate('inactive-maps'), value=inactive_maps)
+        embed.add_field(name=f'__{self.bot.translate("active-maps")}__', value=active_maps)
+        embed.add_field(name=f'__{self.bot.translate("inactive-maps")}__', value=inactive_maps)
         await ctx.send(embed=embed)
 
     @teams.error

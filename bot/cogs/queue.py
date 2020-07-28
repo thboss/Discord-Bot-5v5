@@ -22,7 +22,7 @@ class QueueCog(commands.Cog):
             title += f' ({len(queued_ids)}/{capacity})'
 
         if len(queued_ids) == 0:  # If there are no members in the queue
-            queue_str = self.bot.translate('queue-is-empty')
+            queue_str = f'_{self.bot.translate("queue-is-empty")}_'
         else:  # members still in queue
             queue_str = ''.join(f'{num}. <@{member_id}>\n' for num, member_id in enumerate(queued_ids, start=1))
 
