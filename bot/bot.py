@@ -83,7 +83,10 @@ class LeagueBot(commands.AutoShardedBot):
         self.add_cog(cogs.StatsCog(self))
     
     def translate(self, text):
-        return self.translations[self.language][text]
+        try:
+            return self.translations[self.language][text]
+        except KeyError:
+            return self.translations['en'][text]
 
     def embed_template(self, **kwargs):
         """ Implement the bot's default-style embed. """
