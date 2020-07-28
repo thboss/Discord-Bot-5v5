@@ -34,16 +34,17 @@
     ```py
     DISCORD_BOT_TOKEN= #Bot token from the Discord developer portal
 
-    # NOTE: Bot automatically create required channels/emojis/role
+    # NOTE: Bot automatically create required channels/emojis/roles
+    # VERY IMPORTANT: Make sure all channels have a different name
 
-    DISCORD_LEAGUE_CATEGORY= # League category name
-    DISCORD_LEAGUE_ROLE= # League role name
-    DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name
-    DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name
-    DISCORD_LEAGUE_TEXT_RESULT= # League results channel name
-    DISCORD_LEAGUE_VOICE_LOBBY= # League lobby voice channel name
+    DISCORD_LEAGUE_CATEGORY= # League category name, E.g. "league"
+    DISCORD_LEAGUE_ROLE= # League role name, E.g. "linked"
+    DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name, E.g. "queue"
+    DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name, E.g. "commands"
+    DISCORD_LEAGUE_TEXT_RESULT= # League results channel name, E.g. "results"
+    DISCORD_LEAGUE_VOICE_LOBBY= # League lobby voice channel name, E.g. "Lobby"
 
-    DISCORD_LEAGUE_LANGUAGE=en # Bot language
+    DISCORD_LEAGUE_LANGUAGE= # Bot language (key from translations.json), E.g. "en"
 
     CSGO_LEAGUE_API_KEY= # API from the CS:GO League web backend .env file
     CSGO_LEAGUE_API_URL= # URL where the web panel is hosted
