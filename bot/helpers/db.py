@@ -183,6 +183,46 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'user_id')
 
+    async def get_notify_users(self, guild_id):
+        """ Get all the notify users of the guild from the notify_users table. """
+        statement = (
+            'SELECT user_id FROM notify_users\n'
+            '    WHERE guild_id = $1;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                queue = await connection.fetch(statement, guild_id)
+
+        return self._get_record_attrs(queue, 'user_id')
+
+    async def insert_notify_users(self, guild_id, *user_ids):
+        """ Insert multiple users of a guild into the notify_users table"""
+        statement = (
+            'INSERT INTO notify_users (guild_id, user_id)\n'
+            '    (SELECT * FROM unnest($1::notify_users[]));'
+        )
+
+        insert_rows = [(guild_id, user_id) for user_id in user_ids]
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(statement, insert_rows)
+
+    async def delete_notify_users(self, guild_id, *user_ids):
+        """ Delete multiple users of a guild from the notify_users table. """
+        statement = (
+            'DELETE FROM notify_users\n'
+            '    WHERE guild_id = $1 AND user_id = ANY($2::BIGINT[])\n'
+            '    RETURNING user_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id, user_ids)
+
+        return self._get_record_attrs(deleted, 'user_id')        
+
     async def get_guild(self, guild_id):
         """ Get a guild's row from the guilds table. """
         return await self._get_row('guilds', guild_id)

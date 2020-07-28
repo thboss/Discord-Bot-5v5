@@ -44,13 +44,12 @@ steps = [
     ),
     step(
         (
-            'CREATE TABLE banned_users(\n'
-            '    guild_id BIGSERIAL REFERENCES guilds (id) ON DELETE CASCADE,\n'
-            '    user_id BIGSERIAL REFERENCES users (id),\n'
-            '    unban_time TIMESTAMP WITH TIME ZONE DEFAULT null,\n'
-            '    CONSTRAINT banned_user_pkey PRIMARY KEY (guild_id, user_id)\n'
+            'CREATE TABLE notify_users(\n'
+            '    guild_id BIGSERIAL,\n'
+            '    user_id BIGSERIAL,\n'
+            '    CONSTRAINT notify_user_pkey PRIMARY KEY (guild_id, user_id)\n'
             ');'
         ),
-        'DROP TABLE banned_users;'
+        'DROP TABLE notify_users;'
     )
 ]
