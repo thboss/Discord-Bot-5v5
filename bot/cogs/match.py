@@ -13,6 +13,19 @@ import traceback
 from collections import defaultdict
 
 
+emoji_numbers = [u'\u0030\u20E3',
+                u'\u0031\u20E3',
+                u'\u0032\u20E3',
+                u'\u0033\u20E3',
+                u'\u0034\u20E3',
+                u'\u0035\u20E3',
+                u'\u0036\u20E3',
+                u'\u0037\u20E3',
+                u'\u0038\u20E3',
+                u'\u0039\u20E3',
+                u'\U0001F51F'] 
+
+
 class PickError(ValueError):
     """ Raised when a team draft pick is invalid for some reason. """
 
@@ -38,17 +51,7 @@ class TeamDraftMenu(discord.Message):
         # Add custom attributes
         self.bot = bot
         self.members = members
-        emoji_numbers = [u'\u0031\u20E3',
-                         u'\u0032\u20E3',
-                         u'\u0033\u20E3',
-                         u'\u0034\u20E3',
-                         u'\u0035\u20E3',
-                         u'\u0036\u20E3',
-                         u'\u0037\u20E3',
-                         u'\u0038\u20E3',
-                         u'\u0039\u20E3',
-                         u'\U0001F51F']
-        self.pick_emojis = dict(zip(emoji_numbers, members))
+        self.pick_emojis = dict(zip(emoji_numbers[1:], members))
         self.pick_order = '12211221'
         self.pick_number = None
         self.members_left = None
@@ -350,6 +353,13 @@ class MapVoteMenu(discord.Message):
         self.map_votes = None
         self.future = None
 
+    def _vote_embed(self):       
+        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
+        embed.add_field(name="Maps", value='\n\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool), inline=True)
+        embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool), inline=True)
+        embed.set_footer(text=self.bot.translate('vote-map-footer'))
+        return embed      
+
     async def _process_vote(self, reaction, member):
         """"""
         # Check that reaction is on this message and user is a captain
@@ -365,7 +375,7 @@ class MapVoteMenu(discord.Message):
             return
 
         self.voted_members.add(member)
-
+        await self.edit(embed=self._vote_embed())
         # Check if the voting is over
         if len(self.voted_members) == len(self.members):
             if self.future is not None:
@@ -376,10 +386,7 @@ class MapVoteMenu(discord.Message):
         self.voted_members = set()
         self.map_pool = mpool
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
-        description = '\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool)
-        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'), description=description)
-        embed.set_footer(text=self.bot.translate('vote-map-footer'))
-        await self.edit(embed=embed)
+        await self.edit(embed=self._vote_embed())
 
         for map_option in self.map_pool:
             await self.add_reaction(map_option.emoji)
