@@ -42,14 +42,4 @@ steps = [
         ),
         'DROP TABLE queued_users;'
     ),
-    step(
-        (
-            'CREATE TABLE notify_users(\n'
-            '    guild_id BIGSERIAL,\n'
-            '    user_id BIGSERIAL,\n'
-            '    CONSTRAINT notify_user_pkey PRIMARY KEY (guild_id, user_id)\n'
-            ');'
-        ),
-        'DROP TABLE notify_users;'
-    )
 ]

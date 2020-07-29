@@ -60,7 +60,7 @@ class QueueCog(commands.Cog):
             await ctx.send(embed=embed)
             return
 
-        role_id = await self.bot.get_guild_data(ctx.guild, 'role')
+        role_id = await self.bot.get_guild_data(ctx.guild, 'pug_role')
         role = ctx.guild.get_role(role_id)
         await ctx.author.add_roles(role)
         await self.bot.api_helper.update_discord_name(ctx.author)
@@ -68,6 +68,29 @@ class QueueCog(commands.Cog):
         msg = self.bot.translate('discord-get-role').format(ctx.author.mention, role.mention)
         embed = self.bot.embed_template(description=msg, color=self.bot.color)
         await ctx.send(embed=embed)
+
+    @commands.command(brief='Send alerts')
+    async def alerts(self, ctx, *args):
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        if len(args) == 0:
+            msg = f'Invalid usage: `{self.bot.command_prefix[0]}alerts <on|off>`'
+        else:
+            role_id = await self.bot.get_guild_data(ctx.guild, 'alerts_role')
+            role = ctx.guild.get_role(role_id)
+
+            if args[0].lower() == 'on':
+                await ctx.author.add_roles(role)
+                msg = f'Player {ctx.author.display_name} has been added to alerts'
+            elif args[0].lower() == 'off':
+                await ctx.author.remove_roles(role)
+                msg = f'Player {ctx.author.display_name} has been removed from alerts'
+            else:
+                msg = f'Invalid usage: `{self.bot.command_prefix[0]}alerts <on|off>`'
+
+        embed = self.bot.embed_template(title=msg, color=self.bot.color)
+        await ctx.send(embed=embed)        
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -109,6 +132,14 @@ class QueueCog(commands.Cog):
                     await self.bot.db_helper.insert_queued_users(member.guild.id, member.id)
                     queue_ids += [member.id]
                     title = self.bot.translate('added-to-queue').format(name)
+
+                    if capacity - len(queue_ids) <= self.bot.int_remaining_alerts:
+                        channel_id = await self.bot.get_guild_data(member.guild, 'text_queue')
+                        text_channel = member.guild.get_channel(channel_id)
+                        index_channel = member.guild.channels.index(text_channel)
+                        role_id = await self.bot.get_guild_data(member.guild, 'alerts_role')
+                        role = member.guild.get_role(role_id)
+                        await member.guild.channels[index_channel].send(f'{role.mention} +{capacity - len(queue_ids)}')
 
                     # Check and burst queue if full
                     if len(queue_ids) == capacity:

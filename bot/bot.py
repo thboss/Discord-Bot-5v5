@@ -28,8 +28,8 @@ class Map:
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
-    def __init__(self, discord_token, api_base_url, api_key, str_category, str_role, str_text_queue,
-                 str_text_commands, str_text_results, str_voice_lobby, language, db_pool):
+    def __init__(self, discord_token, api_base_url, api_key, str_category, str_pug_role, str_alerts_role, int_remaining_alerts,
+                str_text_queue, str_text_commands, str_text_results, str_voice_lobby, language, db_pool):
         """ Set attributes and configure bot. """
         # Call parent init
         super().__init__(command_prefix=('q!', 'Q!'), case_insensitive=True)
@@ -39,7 +39,9 @@ class LeagueBot(commands.AutoShardedBot):
         self.api_base_url = api_base_url
         self.api_key = api_key
         self.str_category = str_category
-        self.str_role = str_role
+        self.str_pug_role = str_pug_role
+        self.str_alerts_role = str_alerts_role
+        self.int_remaining_alerts = int(int_remaining_alerts)
         self.str_text_queue = str_text_queue
         self.str_text_commands = str_text_commands
         self.str_text_results = str_text_results
@@ -134,50 +136,53 @@ class LeagueBot(commands.AutoShardedBot):
             channels = [n.name for n in guild.channels]
             everyone_role = get(guild.roles, name='@everyone')          
 
-            if self.str_category not in categories:
-                categ = await guild.create_category_channel(name=self.str_category)
-            else:
+            if self.str_category in categories:
                 categ = get(guild.categories, name=self.str_category)
-
-            if self.str_role not in roles:
-                role = await guild.create_role(name=self.str_role)            
             else:
-                role = get(guild.roles, name=self.str_role)
+                categ = await guild.create_category_channel(name=self.str_category)
 
-            if self.str_text_queue not in channels:
-                text_channel_queue = await guild.create_text_channel(name=self.str_text_queue, category=categ)
+            if self.str_pug_role in roles:
+                pug_role = get(guild.roles, name=self.str_pug_role)
             else:
+                pug_role = await guild.create_role(name=self.str_pug_role)
+
+            if self.str_alerts_role in roles:
+                alerts_role = get(guild.roles, name=self.str_alerts_role)
+            else:
+                alerts_role = await guild.create_role(name=self.str_alerts_role)
+
+            if self.str_text_queue in channels:
                 text_channel_queue = get(guild.channels, name=self.str_text_queue)
-
-            if self.str_text_commands not in channels:
-                text_channel_commands = await guild.create_text_channel(name=self.str_text_commands, category=categ)
             else:
+                text_channel_queue = await guild.create_text_channel(name=self.str_text_queue, category=categ)
+
+            if self.str_text_commands in channels:
                 text_channel_commands = get(guild.channels, name=self.str_text_commands)
-
-            if self.str_text_results not in channels:
-                text_channel_results = await guild.create_text_channel(name=self.str_text_results, category=categ)
             else:
+                text_channel_commands = await guild.create_text_channel(name=self.str_text_commands, category=categ)
+
+            if self.str_text_results in channels:
                 text_channel_results = get(guild.channels, name=self.str_text_results)
-
-            if self.str_voice_lobby not in channels:
-                voice_channel_lobby = await guild.create_voice_channel(name=self.str_voice_lobby, category=categ,
-                                                                       user_limit=10)
             else:
-                voice_channel_lobby = get(guild.channels, name=self.str_voice_lobby)
+                text_channel_results = await guild.create_text_channel(name=self.str_text_results, category=categ)
 
-            awaitables = [
-                self.db_helper.update_guild(guild.id, category=categ.id),
-                self.db_helper.update_guild(guild.id, role=role.id),
-                self.db_helper.update_guild(guild.id, text_queue=text_channel_queue.id),
-                self.db_helper.update_guild(guild.id, text_commands=text_channel_commands.id),
-                self.db_helper.update_guild(guild.id, text_results=text_channel_results.id),
-                self.db_helper.update_guild(guild.id, voice_lobby=voice_channel_lobby.id),
-                text_channel_queue.set_permissions(everyone_role, send_messages=False),
-                text_channel_results.set_permissions(everyone_role, send_messages=False),
-                voice_channel_lobby.set_permissions(everyone_role, connect=False),
-                voice_channel_lobby.set_permissions(role, connect=True)
-            ]
-            await asyncio.gather(*awaitables, loop=self.loop)
+            if self.str_voice_lobby in channels:
+                voice_channel_lobby = get(guild.channels, name=self.str_voice_lobby)
+            else:
+                voice_channel_lobby = await guild.create_voice_channel(name=self.str_voice_lobby,
+                                                                       category=categ, user_limit=10)                
+
+            await self.db_helper.update_guild(guild.id, category=categ.id),
+            await self.db_helper.update_guild(guild.id, pug_role=pug_role.id),
+            await self.db_helper.update_guild(guild.id, alerts_role=alerts_role.id),
+            await self.db_helper.update_guild(guild.id, text_queue=text_channel_queue.id),
+            await self.db_helper.update_guild(guild.id, text_commands=text_channel_commands.id),
+            await self.db_helper.update_guild(guild.id, text_results=text_channel_results.id),
+            await self.db_helper.update_guild(guild.id, voice_lobby=voice_channel_lobby.id),
+            await text_channel_queue.set_permissions(everyone_role, send_messages=False),
+            await text_channel_results.set_permissions(everyone_role, send_messages=False),
+            await voice_channel_lobby.set_permissions(everyone_role, connect=False),
+            await voice_channel_lobby.set_permissions(pug_role, connect=True)
 
     @commands.Cog.listener()
     async def on_ready(self):

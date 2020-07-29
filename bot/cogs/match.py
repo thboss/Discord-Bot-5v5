@@ -14,16 +14,16 @@ from collections import defaultdict
 
 
 emoji_numbers = [u'\u0030\u20E3',
-                u'\u0031\u20E3',
-                u'\u0032\u20E3',
-                u'\u0033\u20E3',
-                u'\u0034\u20E3',
-                u'\u0035\u20E3',
-                u'\u0036\u20E3',
-                u'\u0037\u20E3',
-                u'\u0038\u20E3',
-                u'\u0039\u20E3',
-                u'\U0001F51F'] 
+                 u'\u0031\u20E3',
+                 u'\u0032\u20E3',
+                 u'\u0033\u20E3',
+                 u'\u0034\u20E3',
+                 u'\u0035\u20E3',
+                 u'\u0036\u20E3',
+                 u'\u0037\u20E3',
+                 u'\u0038\u20E3',
+                 u'\u0039\u20E3',
+                 u'\U0001F51F'] 
 
 
 class PickError(ValueError):
@@ -353,12 +353,12 @@ class MapVoteMenu(discord.Message):
         self.map_votes = None
         self.future = None
 
-    def _vote_embed(self):       
+    def _vote_embed(self):
         embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        embed.add_field(name="Maps", value='\n\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool), inline=True)
-        embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool), inline=True)
+        embed.add_field(name="Maps", value='\n\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
+        embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool))
         embed.set_footer(text=self.bot.translate('vote-map-footer'))
-        return embed      
+        return embed
 
     async def _process_vote(self, reaction, member):
         """"""
