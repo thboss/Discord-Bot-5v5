@@ -96,7 +96,10 @@
         "first-blood-rate":     "First Blood Rate",
         "cannot-get-stats":     "Unable to get **{}**'s stats: Their account is not linked",
         "nobody-ranked":        "Nobody on this server is ranked!",
-        "server-leaderboard":   "CS:GO League Server Leaderboard"
+        "server-leaderboard":   "CS:GO League Server Leaderboard",
+        "invalid-usage":        "Invalid usage",
+        "added-alerts":         "Player {} has been added to alerts",
+        "removed-alerts":       "Player {} has been removed from alerts"
     },
     "ru": {
         "queue-is-empty":       "Очередь пустая...",

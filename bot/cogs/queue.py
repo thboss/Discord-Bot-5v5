@@ -69,25 +69,25 @@ class QueueCog(commands.Cog):
         embed = self.bot.embed_template(description=msg, color=self.bot.color)
         await ctx.send(embed=embed)
 
-    @commands.command(brief='Send alerts')
+    @commands.command(brief='Send alerts about remaining to fill up the queue')
     async def alerts(self, ctx, *args):
         if not await self.bot.isValidChannel(ctx):
             return
 
         if len(args) == 0:
-            msg = f'Invalid usage: `{self.bot.command_prefix[0]}alerts <on|off>`'
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
         else:
             role_id = await self.bot.get_guild_data(ctx.guild, 'alerts_role')
             role = ctx.guild.get_role(role_id)
 
             if args[0].lower() == 'on':
                 await ctx.author.add_roles(role)
-                msg = f'Player {ctx.author.display_name} has been added to alerts'
+                msg = self.bot.translate('added-alerts').format(ctx.author.display_name)
             elif args[0].lower() == 'off':
                 await ctx.author.remove_roles(role)
-                msg = f'Player {ctx.author.display_name} has been removed from alerts'
+                msg = self.bot.translate('removed-alerts').format(ctx.author.display_name)
             else:
-                msg = f'Invalid usage: `{self.bot.command_prefix[0]}alerts <on|off>`'
+                msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
 
         embed = self.bot.embed_template(title=msg, color=self.bot.color)
         await ctx.send(embed=embed)
@@ -133,7 +133,7 @@ class QueueCog(commands.Cog):
                     queue_ids += [member.id]
                     title = self.bot.translate('added-to-queue').format(name)
 
-                    if capacity - len(queue_ids) <= self.bot.int_remaining_alerts:
+                    if capacity - len(queue_ids) == self.bot.int_remaining_alerts:
                         channel_id = await self.bot.get_guild_data(member.guild, 'text_queue')
                         text_channel = member.guild.get_channel(channel_id)
                         index_channel = member.guild.channels.index(text_channel)
