@@ -48,7 +48,7 @@ class AuthCog(commands.Cog):
         else:
             await self.bot.api_helper.unlink_discord(ctx.author)
             title = self.bot.translate('unlinked').format(ctx.author.display_name)
-            role_id = await self.bot.get_guild_data(ctx.guild, 'role')
+            role_id = await self.bot.get_guild_data(ctx.guild, 'pug_role')
             role = ctx.guild.get_role(role_id)
             await ctx.author.remove_roles(role)
         
