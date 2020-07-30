@@ -90,7 +90,7 @@ class QueueCog(commands.Cog):
                 msg = f'Invalid usage: `{self.bot.command_prefix[0]}alerts <on|off>`'
 
         embed = self.bot.embed_template(title=msg, color=self.bot.color)
-        await ctx.send(embed=embed)        
+        await ctx.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):

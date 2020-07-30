@@ -175,6 +175,7 @@ class TeamDraftMenu(discord.Message):
         # Initialize draft
         self.members_left = self.members.copy()  # Copy members to edit players remaining in the player pool
         self.teams = [[], []]
+        self.pick_number = 0
         captain_method = await self.bot.get_guild_data(self.guild, 'captain_method')
 
         if captain_method == 'rank':
