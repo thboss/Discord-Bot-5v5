@@ -44,7 +44,7 @@
         "members-must-even":    "members argument must have even length",
         "vote-map-started":     "Map vote started! (1 min)",
         "vote-map-footer":      "React to either of the map icons below to vote for the corresponding map",
-        "react-ready":          "**Players:**\n{}\n\nReact with the {} below to ready up (1 minute)",
+        "react-ready":          "React with the {} below to ready up (1 minute)",
         "queue-filled":         "Queue has filled up!",
         "not-all-ready":        "Not everyone was ready!",
         "not-ready-removed":    "The missing players have been removed from the queue",
@@ -99,7 +99,9 @@
         "server-leaderboard":   "CS:GO League Server Leaderboard",
         "invalid-usage":        "Invalid usage",
         "added-alerts":         "Player {} has been added to alerts",
-        "removed-alerts":       "Player {} has been removed from alerts"
+        "removed-alerts":       "Player {} has been removed from alerts",
+        "player":               "Player",
+        "status":               "Status"
     },
     "ru": {
         "queue-is-empty":       "Очередь пустая...",
@@ -146,7 +148,7 @@
         "members-must-even":    "аргумент участников должен иметь четную длину",
         "vote-map-started":     "Голосование за карту началось! (1 мин)",
         "map-vote-footer":      "Нажмите на иконку карты ниже чтобы забанить её",
-        "react-ready":          "**Игроки:**\n{}\n\nНажмите на {} внизу чтобы подтвердить готовность (1 min)",
+        "react-ready":          "Нажмите на {} внизу чтобы подтвердить готовность (1 min)",
         "queue-filled":         "Очередь заполнилась!",
         "not-all-ready":        "Кто-то был не готов!",
         "not-ready-removed":    "Неготовые игроки были убраны из очереди",
@@ -242,7 +244,7 @@
         "user-banned-map":      "**{}** banlandı. {}",
         "map-bans-begun":       "Harita yasakları başladı!",
         "members-must-even":    "üye argümanının uzunluğu eşit olmalıdır",
-        "react-ready":          "**Oyuncular:**\n{}\n\nHazır ol {} aşağıdaki bilgiler yer almaktadır (1 dakika)",
+        "react-ready":          "Hazır ol {} aşağıdaki bilgiler yer almaktadır (1 dakika)",
         "queue-filled":         "Sıra doldu!",
         "not-all-ready":        "Herkes hazır değil!",
         "not-ready-removed":    "Eksik oyuncular sıradan çıkarıldı",

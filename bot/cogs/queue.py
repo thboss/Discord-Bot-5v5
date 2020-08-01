@@ -2,6 +2,7 @@
 
 from discord.ext import commands
 from discord.errors import NotFound
+from collections import defaultdict
 import asyncio
 
 
@@ -12,6 +13,8 @@ class QueueCog(commands.Cog):
         """ Set attributes. """
         self.bot = bot
         self.last_queue_msgs = {}
+        self.block_lobby = {}
+        self.block_lobby = defaultdict(lambda: False, self.block_lobby)
 
     async def queue_embed(self, guild, title=None):
         """ Method to create the queue embed for a guild. """
@@ -49,49 +52,6 @@ class QueueCog(commands.Cog):
             except NotFound:
                 self.last_queue_msgs[ctx.guild] = await ctx.guild.channels[index_channel].send(embed=embed)
 
-    @commands.command(brief='Check if account is linked and give linked role')
-    async def check(self, ctx):
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        if not await self.bot.api_helper.is_linked(ctx.author.id):
-            msg = self.bot.translate('discord-not-linked').format(ctx.author.mention)
-            embed = self.bot.embed_template(description=msg, color=self.bot.color)
-            await ctx.send(embed=embed)
-            return
-
-        role_id = await self.bot.get_guild_data(ctx.guild, 'pug_role')
-        role = ctx.guild.get_role(role_id)
-        await ctx.author.add_roles(role)
-        await self.bot.api_helper.update_discord_name(ctx.author)
-
-        msg = self.bot.translate('discord-get-role').format(ctx.author.mention, role.mention)
-        embed = self.bot.embed_template(description=msg, color=self.bot.color)
-        await ctx.send(embed=embed)
-
-    @commands.command(brief='Send alerts about remaining to fill up the queue')
-    async def alerts(self, ctx, *args):
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        if len(args) == 0:
-            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
-        else:
-            role_id = await self.bot.get_guild_data(ctx.guild, 'alerts_role')
-            role = ctx.guild.get_role(role_id)
-
-            if args[0].lower() == 'on':
-                await ctx.author.add_roles(role)
-                msg = self.bot.translate('added-alerts').format(ctx.author.display_name)
-            elif args[0].lower() == 'off':
-                await ctx.author.remove_roles(role)
-                msg = self.bot.translate('removed-alerts').format(ctx.author.display_name)
-            else:
-                msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
-
-        embed = self.bot.embed_template(title=msg, color=self.bot.color)
-        await ctx.send(embed=embed)
-
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
         channel_id = await self.bot.get_guild_data(member.guild, 'voice_lobby')
@@ -103,7 +63,7 @@ class QueueCog(commands.Cog):
         match_cog = self.bot.get_cog('MatchCog')
 
         if after.channel is not None:
-            if (after.channel != voice_lobby and before.channel != voice_lobby) or match_cog.moving_players[member.guild]:
+            if (after.channel != voice_lobby and before.channel != voice_lobby) or self.block_lobby[member.guild]:
                 return
 
             if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
@@ -143,15 +103,18 @@ class QueueCog(commands.Cog):
 
                     # Check and burst queue if full
                     if len(queue_ids) == capacity:
+                        self.block_lobby[member.guild] = True
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
                         try:
                             all_readied = await match_cog.start_match(member, queue_members)
                         except asyncio.TimeoutError:
+                            self.block_lobby[member.guild] = False
                             return
 
                         if all_readied:
                             await self.bot.db_helper.delete_queued_users(member.guild.id, *queue_ids)
 
+                        self.block_lobby[member.guild] = False
                         return
 
             embed = await self.queue_embed(member.guild, title)
@@ -159,7 +122,7 @@ class QueueCog(commands.Cog):
             await self.update_last_msg(member, embed)
 
         if before.channel is not None:
-            if before.channel != voice_lobby or match_cog.moving_players[member.guild]:
+            if before.channel != voice_lobby or self.block_lobby[member.guild]:
                 return
 
             awaitables = [
@@ -168,16 +131,7 @@ class QueueCog(commands.Cog):
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
             queue_ids = results[0]
-            capacity = results[1]['capacity']                             
-
-            if len(queue_ids) == capacity:
-                if member.id in queue_ids:
-                    if member.guild in match_cog.pending_ready_tasks:
-                        match_cog.pending_ready_tasks[member.guild].close()
-                        match_cog.pending_ready_tasks.pop(member.guild)
-                    
-                    if member.guild in match_cog.dict_ready_message:
-                        await match_cog.dict_ready_message[member.guild].delete()
+            capacity = results[1]['capacity']
                     
             removed = await self.bot.db_helper.delete_queued_users(member.guild.id, member.id)
 
@@ -189,6 +143,50 @@ class QueueCog(commands.Cog):
             embed = await self.queue_embed(member.guild, title)
             # Update queue display message
             await self.update_last_msg(member, embed)
+
+    @commands.command(brief='Check if account is linked and give linked role')
+    async def check(self, ctx):
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        if not await self.bot.api_helper.is_linked(ctx.author.id):
+            msg = self.bot.translate('discord-not-linked').format(ctx.author.mention)
+            embed = self.bot.embed_template(description=msg, color=self.bot.color)
+            await ctx.send(embed=embed)
+            return
+
+        role_id = await self.bot.get_guild_data(ctx.guild, 'pug_role')
+        role = ctx.guild.get_role(role_id)
+        await ctx.author.add_roles(role)
+        await self.bot.api_helper.update_discord_name(ctx.author)
+
+        msg = self.bot.translate('discord-get-role').format(ctx.author.mention, role.mention)
+        embed = self.bot.embed_template(description=msg, color=self.bot.color)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='alerts <on|off>',
+                      brief='Send alerts about remaining to fill up the queue')
+    async def alerts(self, ctx, *args):
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        if len(args) == 0:
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
+        else:
+            role_id = await self.bot.get_guild_data(ctx.guild, 'alerts_role')
+            role = ctx.guild.get_role(role_id)
+
+            if args[0].lower() == 'on':
+                await ctx.author.add_roles(role)
+                msg = self.bot.translate('added-alerts').format(ctx.author.display_name)
+            elif args[0].lower() == 'off':
+                await ctx.author.remove_roles(role)
+                msg = self.bot.translate('removed-alerts').format(ctx.author.display_name)
+            else:
+                msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
+
+        embed = self.bot.embed_template(title=msg, color=self.bot.color)
+        await ctx.send(embed=embed)            
 
     @commands.command(usage='remove <member mention>',
                       brief='Remove the mentioned member from the queue (must have server kick perms)')

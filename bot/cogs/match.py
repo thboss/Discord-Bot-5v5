@@ -11,6 +11,8 @@ import re
 import sys
 import traceback
 from collections import defaultdict
+#import pyrankvote
+#from pyrankvote import Candidate, Ballot
 
 
 emoji_numbers = [u'\u0030\u20E3',
@@ -331,6 +333,107 @@ class MapDraftMenu(discord.Message):
 
         return map_pick
 
+'''
+class MapVoteMenu(discord.Message):
+    """ Message containing the components for a map draft. """
+
+    def __init__(self, message, bot, members):
+        """ Copy constructor from a message and specific team draft args. """
+        # Copy all attributes from message object
+        for attr_name in message.__slots__:
+            try:
+                attr_val = getattr(message, attr_name)
+            except AttributeError:
+                continue
+
+            setattr(self, attr_name, attr_val)
+
+        # Add custom attributes
+        self.bot = bot
+        self.members = members
+        self.map_pool = None
+        self.ballots = None
+        self.maps_options = None
+        self.ranked_votes = None
+        self.future = None
+
+    def _vote_embed(self):
+        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
+        embed.add_field(name="Maps", value='\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
+        embed.set_footer(text=self.bot.translate('vote-map-footer'))
+        return embed
+
+    async def _process_vote(self, reaction, member):
+        """"""
+        # Check that reaction is on this message and user is a captain
+        if reaction.message.id != self.id or member not in self.members:
+            return
+
+        # Add map vote if it is valid
+        if len(self.ranked_votes[member]) == 3:
+            return
+        
+        for c in self.maps_options:
+            if c.name == str(reaction) and c not in self.ranked_votes[member]:
+                self.ranked_votes[member].append(c)
+                self.ballots.append(Ballot(self.ranked_votes[member]))
+
+        if len(self.ranked_votes[member]) == 3:
+            for i, vote_option in enumerate(self.ranked_votes[member]):
+                print(f'Rank {i+1} :',vote_option.name)
+            print()
+        # Check if the voting is over        
+        for voter in self.ranked_votes:
+            if len(self.ranked_votes[voter]) != 3 or len(self.ranked_votes) != len(self.members):
+                return
+
+        if self.future is not None:
+            self.future.set_result(None)
+
+    async def vote(self, mpool):
+        """"""
+        self.map_pool = mpool
+        self.ballots = []
+        self.maps_options = []
+        self.ranked_votes = defaultdict(list)
+
+        for m in self.map_pool:
+            self.maps_options.append(Candidate(m.emoji))
+
+        await self.edit(embed=self._vote_embed())
+
+        for map_option in self.map_pool:
+            await self.add_reaction(map_option.emoji)
+
+        # Add listener handlers and wait until there are no maps left to ban
+        self.future = self.bot.loop.create_future()
+        self.bot.add_listener(self._process_vote, name='on_reaction_add')
+
+        try:
+            await asyncio.wait_for(self.future, 60)
+        except asyncio.TimeoutError:
+            pass
+
+        self.bot.remove_listener(self._process_vote, name='on_reaction_add')
+        try:
+            await self.clear_reactions()
+        except NotFound:
+            pass
+
+        election_result = pyrankvote.instant_runoff_voting(self.maps_options, self.ballots)
+        print(election_result)
+        winner = election_result.get_winners()[0].name
+        pick_map = [m for m in self.map_pool if m.emoji == winner][0]
+        print(pick_map.name)
+
+        self.future = None
+        self.map_pool = None
+        self.ballots = None
+        self.maps_options = None
+        self.ranked_votes = None
+
+        return pick_map
+'''
 
 class MapVoteMenu(discord.Message):
     """ Message containing the components for a map draft. """
@@ -439,11 +542,11 @@ class MatchCog(commands.Cog):
     def __init__(self, bot):
         """ Set attributes. """
         self.bot = bot
-        self.pending_ready_tasks = {}
+        self.members = {}
+        self.reactors = {}
+        self.future = {}
         self.dict_ready_message = {}
         self.match_dict = {}
-        self.moving_players = {}
-        self.moving_players = defaultdict(lambda: False, self.moving_players)
 
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
@@ -601,14 +704,36 @@ class MatchCog(commands.Cog):
         except KeyError:
             return
 
+    def _ready_embed(self, ctx):
+        players_names = [member.nick if member.nick is not None else member.display_name for member in self.members[ctx.guild]]
+        description = self.bot.translate('react-ready').format('✅')
+        embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
+        embed.add_field(name=f"__{self.bot.translate('player')}__", value='\n'.join(player for player in players_names))
+        embed.add_field(name=f"__{self.bot.translate('status')}__", value='\n'.join(':x:' if member not in self.reactors[ctx.guild] else '✅' for member in self.members[ctx.guild]))
+        return embed
+
+    async def _process_ready(self, reaction, member):
+        """ Check if all players in the queue have readied up. """
+        # Check if this is a reaction we care about
+        if reaction.message.id != self.dict_ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
+            return
+
+        self.reactors[member.guild].add(member)
+        await self.dict_ready_message[member.guild].edit(embed=self._ready_embed(member))
+        if self.reactors[member.guild].issuperset(self.members[member.guild]):  # All queued members have reacted
+            if self.future[member.guild] is not None:
+                self.future[member.guild].set_result(None)
+
     async def start_match(self, ctx, members):
         """ Ready all the members up and start a match. """
         # Notify everyone to ready up
-        member_mentions = [member.mention for member in members]
-        ready_emoji = '✅'
-        description = self.bot.translate('react-ready').format(chr(10).join(member_mentions), ready_emoji)
-        burst_embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
+        self.members[ctx.guild] =  members
+        self.reactors[ctx.guild] = set()  # Track who has readied up
+        self.future[ctx.guild] = self.bot.loop.create_future()
+
         queue_cog = self.bot.get_cog('QueueCog')
+        member_mentions = [member.mention for member in members]
+        burst_embed = self._ready_embed(ctx)
         msg = queue_cog.last_queue_msgs.get(ctx.guild)
         channel_id = await self.bot.get_guild_data(ctx.guild, 'text_queue')
         text_channel = ctx.guild.get_channel(channel_id)
@@ -620,33 +745,14 @@ class MatchCog(commands.Cog):
         index_channel = ctx.guild.channels.index(text_channel)
         ready_message = await ctx.guild.channels[index_channel].send(''.join(member_mentions), embed=burst_embed)
         self.dict_ready_message[ctx.guild] = ready_message
+        await ready_message.add_reaction('✅')       
 
-        await ready_message.add_reaction(ready_emoji)
-
-        reactors = set()  # Track who has readied up
-
-        # Wait for everyone to ready up
-        def all_ready(reaction, member):
-            """ Check if all players in the queue have readied up. """
-            # Check if this is a reaction we care about
-            if reaction.message.id != ready_message.id or member not in members or reaction.emoji != ready_emoji:
-                return False
-
-            reactors.add(member)
-
-            if reactors.issuperset(members):  # All queued members have reacted
-                return True
-            else:
-                return False
-
+        self.bot.add_listener(self._process_ready, name='on_reaction_add')
         try:
-            if ctx.guild in self.pending_ready_tasks:
-                self.pending_ready_tasks[ctx.guild].close()
-
-            self.pending_ready_tasks[ctx.guild] = self.bot.wait_for('reaction_add', timeout=60.0, check=all_ready)
-            await self.pending_ready_tasks[ctx.guild]
+            await asyncio.wait_for(self.future[ctx.guild], 60)
         except asyncio.TimeoutError:  # Not everyone readied up
-            unreadied = set(members) - reactors
+            self.bot.remove_listener(self._process_ready, name='on_reaction_add')
+            unreadied = set(members) - self.reactors[ctx.guild]
             awaitables = [
                 ready_message.clear_reactions(),
                 self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
@@ -657,7 +763,6 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
             # disconnect unreadied players from the lobby voice channel
-            self.moving_players[ctx.guild] = True
             for player in unreadied:
                 try:
                     await player.move_to(None)
@@ -665,12 +770,10 @@ class MatchCog(commands.Cog):
                     pass
 
             await ready_message.edit(embed=burst_embed)
-            self.moving_players[ctx.guild] = False
             return False  # Not everyone readied up
         else:  # Everyone readied up
-            if ctx.guild in self.pending_ready_tasks:
-                self.pending_ready_tasks.pop(ctx.guild)
             # Attempt to make teams and start match
+            self.bot.remove_listener(self._process_ready, name='on_reaction_add')
             awaitables = [
                 ready_message.clear_reactions(),
                 self.bot.db_helper.get_guild(ctx.guild.id)
@@ -704,7 +807,6 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
             await ready_message.edit(embed=burst_embed)
 
-            self.moving_players[ctx.guild] = True
             # Check if able to get a match server and edit message embed accordingly
             try:
                 match = await self.bot.api_helper.start_match(team_one, team_two,
@@ -715,7 +817,6 @@ class MatchCog(commands.Cog):
                 await ready_message.delete()
                 self.dict_ready_message.pop(ctx.guild)
                 await ctx.guild.channels[index_channel].send(embed=burst_embed)
-                self.moving_players[ctx.guild] = False
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
@@ -739,7 +840,6 @@ class MatchCog(commands.Cog):
             self.dict_ready_message.pop(ctx.guild)
             await ctx.guild.channels[index_channel].send(embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
-            self.moving_players[ctx.guild] = False
 
             return True  # Everyone readied up
 
