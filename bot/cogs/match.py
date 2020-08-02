@@ -545,7 +545,7 @@ class MatchCog(commands.Cog):
         self.members = {}
         self.reactors = {}
         self.future = {}
-        self.dict_ready_message = {}
+        self.ready_message = {}
         self.match_dict = {}
 
     async def draft_teams(self, message, members):
@@ -697,6 +697,7 @@ class MatchCog(commands.Cog):
             return
 
         match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
+        self.bot.api_helper.get_live_matches().pop(match_id)
 
         try:
             if match_id in self.match_dict[message.guild]:
@@ -705,21 +706,27 @@ class MatchCog(commands.Cog):
             return
 
     def _ready_embed(self, ctx):
-        players_names = [member.nick if member.nick is not None else member.display_name for member in self.members[ctx.guild]]
+        str_value = ''
         description = self.bot.translate('react-ready').format('✅')
         embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
-        embed.add_field(name=f"__{self.bot.translate('player')}__", value='\n'.join(player for player in players_names))
-        embed.add_field(name=f"__{self.bot.translate('status')}__", value='\n'.join(':x:' if member not in self.reactors[ctx.guild] else '✅' for member in self.members[ctx.guild]))
+        for member in self.members[ctx.guild]:
+            if member not in self.reactors[ctx.guild]:
+                str_value += f':x:  {member.nick if member.nick is not None else member.display_name}\n'
+            else:
+                str_value += f'✅  {member.nick if member.nick is not None else member.display_name}\n'
+
+        embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__", value=str_value)
+        del str_value, description
         return embed
 
     async def _process_ready(self, reaction, member):
         """ Check if all players in the queue have readied up. """
         # Check if this is a reaction we care about
-        if reaction.message.id != self.dict_ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
+        if reaction.message.id != self.ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
             return
 
         self.reactors[member.guild].add(member)
-        await self.dict_ready_message[member.guild].edit(embed=self._ready_embed(member))
+        await self.ready_message[member.guild].edit(embed=self._ready_embed(member))
         if self.reactors[member.guild].issuperset(self.members[member.guild]):  # All queued members have reacted
             if self.future[member.guild] is not None:
                 self.future[member.guild].set_result(None)
@@ -743,9 +750,8 @@ class MatchCog(commands.Cog):
             queue_cog.last_queue_msgs.pop(ctx.guild)
 
         index_channel = ctx.guild.channels.index(text_channel)
-        ready_message = await ctx.guild.channels[index_channel].send(''.join(member_mentions), embed=burst_embed)
-        self.dict_ready_message[ctx.guild] = ready_message
-        await ready_message.add_reaction('✅')       
+        self.ready_message[ctx.guild] = await ctx.guild.channels[index_channel].send(''.join(member_mentions), embed=burst_embed)
+        await self.ready_message[ctx.guild].add_reaction('✅')
 
         self.bot.add_listener(self._process_ready, name='on_reaction_add')
         try:
@@ -754,7 +760,7 @@ class MatchCog(commands.Cog):
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
             unreadied = set(members) - self.reactors[ctx.guild]
             awaitables = [
-                ready_message.clear_reactions(),
+                self.ready_message[ctx.guild].clear_reactions(),
                 self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
@@ -769,13 +775,14 @@ class MatchCog(commands.Cog):
                 except (AttributeError, discord.errors.HTTPException):
                     pass
 
-            await ready_message.edit(embed=burst_embed)
+            await self.ready_message[ctx.guild].edit(embed=burst_embed)
+            self.ready_message.pop(ctx.guild)
             return False  # Not everyone readied up
         else:  # Everyone readied up
             # Attempt to make teams and start match
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
             awaitables = [
-                ready_message.clear_reactions(),
+                self.ready_message[ctx.guild].clear_reactions(),
                 self.bot.db_helper.get_guild(ctx.guild.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
@@ -788,16 +795,16 @@ class MatchCog(commands.Cog):
             elif team_method == 'autobalance':
                 team_one, team_two = await self.autobalance_teams(members)
             elif team_method == 'captains':
-                team_one, team_two = await self.draft_teams(ready_message, members)
+                team_one, team_two = await self.draft_teams(self.ready_message[ctx.guild], members)
             else:
                 raise ValueError(self.bot.translate('team-method-not-valid').format(team_method))
 
             await asyncio.sleep(1)
             # Get map pick
             if map_method == 'captains':
-                map_pick = await self.draft_maps(ready_message, mpool, team_one[0], team_two[0])
+                map_pick = await self.draft_maps(self.ready_message[ctx.guild], mpool, team_one[0], team_two[0])
             elif map_method == 'vote':
-                map_pick = await self.vote_maps(ready_message, mpool, members)
+                map_pick = await self.vote_maps(self.ready_message[ctx.guild], mpool, members)
             elif map_method == 'random':
                 map_pick = await self.random_map(mpool)
             else:
@@ -805,7 +812,7 @@ class MatchCog(commands.Cog):
 
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
-            await ready_message.edit(embed=burst_embed)
+            await self.ready_message[ctx.guild].edit(embed=burst_embed)
 
             # Check if able to get a match server and edit message embed accordingly
             try:
@@ -814,13 +821,12 @@ class MatchCog(commands.Cog):
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
-                await ready_message.delete()
-                self.dict_ready_message.pop(ctx.guild)
+                self.ready_message.pop(ctx.guild)
                 await ctx.guild.channels[index_channel].send(embed=burst_embed)
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
-                await asyncio.sleep(5)
+                await asyncio.sleep(3)
                 team1_name = team_one[0].nick if team_one[0].nick is not None else team_one[0].display_name
                 team2_name = team_two[0].nick if team_two[0].nick is not None else team_two[0].display_name
                 match_id = str(match.get_match_id)
@@ -836,8 +842,9 @@ class MatchCog(commands.Cog):
                                       value='\n'.join(member.mention for member in team_two))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
-            await ready_message.delete()
-            self.dict_ready_message.pop(ctx.guild)
+                await self.ready_message[ctx.guild].delete()
+                self.ready_message.pop(ctx.guild)
+                
             await ctx.guild.channels[index_channel].send(embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
 
@@ -983,9 +990,27 @@ class MatchCog(commands.Cog):
         embed.add_field(name=f'__{self.bot.translate("inactive-maps")}__', value=inactive_maps)
         await ctx.send(embed=embed)
 
+    @commands.command(usage='endmatch [match id]',
+                      brief='Force end a match (must have admin perms)')
+    @commands.has_permissions(administrator=True)                      
+    async def endmatch(self, ctx, *args):
+        """ Test end match """
+        if not await self.bot.isValidChannel(ctx):
+            return
+        try:
+            await self.bot.api_helper.end_match(args[0])
+        except KeyError:
+            msg = self.bot.translate("invalid-match-id")
+        else:
+            msg = self.bot.translate("match-cancelled").format(args[0])
+
+        embed = self.bot.embed_template(title=msg)
+        await ctx.send(embed=embed)        
+
     @teams.error
     @captains.error
     @maps.error
+    @endmatch.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):

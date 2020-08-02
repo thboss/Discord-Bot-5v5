@@ -100,8 +100,9 @@
         "invalid-usage":        "Invalid usage",
         "added-alerts":         "Player {} has been added to alerts",
         "removed-alerts":       "Player {} has been removed from alerts",
-        "player":               "Player",
-        "status":               "Status"
+        "player":               "Players",
+        "invalid-match-id":     "Invalid Match ID",
+        "match-cancelled":      "Match ID ({}) has been cancelled"
     },
     "ru": {
         "queue-is-empty":       "Очередь пустая...",
