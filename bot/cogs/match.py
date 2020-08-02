@@ -997,12 +997,16 @@ class MatchCog(commands.Cog):
         """ Test end match """
         if not await self.bot.isValidChannel(ctx):
             return
-        try:
-            await self.bot.api_helper.end_match(args[0])
-        except KeyError:
-            msg = self.bot.translate("invalid-match-id")
+        
+        if len(args) == 0:
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}endmatch <Match ID>`'
         else:
-            msg = self.bot.translate("match-cancelled").format(args[0])
+            try:
+                await self.bot.api_helper.end_match(args[0])
+            except KeyError:
+                msg = self.bot.translate("invalid-match-id")
+            else:
+                msg = self.bot.translate("match-cancelled").format(args[0])
 
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)        
