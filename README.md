@@ -38,7 +38,9 @@
     # VERY IMPORTANT: Make sure all channels have a different name
 
     DISCORD_LEAGUE_CATEGORY= # League category name, E.g. "league"
-    DISCORD_LEAGUE_ROLE= # League role name, E.g. "linked"
+    DISCORD_LEAGUE_PUG_ROLE= # League role name, E.g. "linked"
+    DISCORD_LEAGUE_ALERTS_ROLE= # League role name, E.g. "alerts"
+    DISCORD_LEAGUE_REMAINING_ALERTS=2 # send alerts when there are (n) remaining players to fill up the queue
     DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name, E.g. "queue"
     DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name, E.g. "commands"
     DISCORD_LEAGUE_TEXT_RESULT= # League results channel name, E.g. "results"
@@ -79,12 +81,16 @@
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
+`q!endmatch <match id>` **-** Force end live match <br>
+
 
 ### Player commands
 
 `q!link` **-**  Link a player on the backend <br>
 
 `q!unlink` **-**  Unlink a player on the backend <br>
+
+`q!alerts <on|off>` **-** Enable/Disable alerts about remaining players to fill up the queue <br>
 
 `q!stats` **-** See your stats <br>
 
