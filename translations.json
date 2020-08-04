@@ -43,6 +43,7 @@
         "map-bans-begun":       "Map bans have begun!",
         "members-must-even":    "members argument must have even length",
         "vote-map-started":     "Map vote started! (1 min)",
+        "maps":                 "Maps",
         "vote-map-footer":      "React to either of the map icons below to vote for the corresponding map",
         "react-ready":          "React with the {} below to ready up (1 minute)",
         "queue-filled":         "Queue has filled up!",
@@ -57,6 +58,7 @@
         "server-connect":       "**URL:** {}\n**Command:** `{}`",
         "team":                 "Team",
         "match":                "Match #",
+        "match-over":           "Match Over",
         "server-message-footer":"Server will close after 5 minutes if anyone doesn't join",
         "team-method":          "The current team creation method is {}",
         "team-method-already":  "The current team creation method is already set to {}",
@@ -102,7 +104,7 @@
         "removed-alerts":       "Player {} has been removed from alerts",
         "player":               "Players",
         "invalid-match-id":     "Invalid Match ID",
-        "match-cancelled":      "Match ID ({}) has been cancelled"
+        "match-cancelled":      "Match ID **{}** has been cancelled"
     },
     "ru": {
         "queue-is-empty":       "Очередь пустая...",

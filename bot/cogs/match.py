@@ -459,35 +459,57 @@ class MapVoteMenu(discord.Message):
 
     def _vote_embed(self):
         embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        embed.add_field(name="Maps", value='\n\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
-        embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool))
+        embed.add_field(name=f':map: __{self.bot.translate("maps")}__', value='\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
+        #embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool))
         embed.set_footer(text=self.bot.translate('vote-map-footer'))
         return embed
 
     async def _process_vote(self, reaction, member):
         """"""
         # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or member not in self.members:
+        if reaction.message.id != self.id or member == self.author:
             return
 
-        # Add map vote if it is valid
+        if member not in self.members or str(reaction) not in [m.emoji for m in self.map_pool]:
+            await self.remove_reaction(reaction, member)
+            return
+
         if member in self.voted_members:
-            return
-        try:
-            self.map_votes[str(reaction)] += 1
-        except KeyError:
-            return
+            await self.remove_reaction(self.voted_members[member], member)
+            self.map_votes[self.voted_members[member]] -= 1
+        # Add map vote if it is valid
+        self.map_votes[str(reaction)] += 1
 
-        self.voted_members.add(member)
+        self.voted_members[member] = str(reaction)
         await self.edit(embed=self._vote_embed())
         # Check if the voting is over
         if len(self.voted_members) == len(self.members):
             if self.future is not None:
                 self.future.set_result(None)
 
+    async def _process_unvote(self, reaction, member):
+        """"""
+        # Check that reaction is on this message and user is a captain
+        if reaction.message.id != self.id or member == self.author:
+            return
+
+        if member not in self.members or str(reaction) not in [m.emoji for m in self.map_pool]:
+            return
+
+        if member in self.voted_members and str(reaction) != self.voted_members[member]:
+            return
+
+        if member not in self.voted_members:
+            return
+        # Add map vote if it is valid
+        self.map_votes[str(reaction)] -= 1
+
+        self.voted_members.pop(member)
+        await self.edit(embed=self._vote_embed())
+
     async def vote(self, mpool):
         """"""
-        self.voted_members = set()
+        self.voted_members = {}
         self.map_pool = mpool
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
         await self.edit(embed=self._vote_embed())
@@ -498,6 +520,7 @@ class MapVoteMenu(discord.Message):
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
         self.bot.add_listener(self._process_vote, name='on_reaction_add')
+        self.bot.add_listener(self._process_unvote, name='on_reaction_remove')
 
         try:
             await asyncio.wait_for(self.future, 60)
@@ -505,6 +528,7 @@ class MapVoteMenu(discord.Message):
             pass
 
         self.bot.remove_listener(self._process_vote, name='on_reaction_add')
+        self.bot.remove_listener(self._process_unvote, name='on_reaction_remove')
         try:
             await self.clear_reactions()
         except NotFound:
@@ -658,7 +682,7 @@ class MatchCog(commands.Cog):
 
         role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
 
-        vc_ended_match = await voice_lobby.guild.create_voice_channel(name=f'{self.bot.translate("match")}{matchid}',
+        vc_ended_match = await voice_lobby.guild.create_voice_channel(name=self.bot.translate('match-over'),
                                                                          category=ended_match[0],
                                                                          user_limit=len(match_players))
         await vc_ended_match.set_permissions(role, connect=False, read_messages=True)
@@ -721,8 +745,14 @@ class MatchCog(commands.Cog):
 
     async def _process_ready(self, reaction, member):
         """ Check if all players in the queue have readied up. """
-        # Check if this is a reaction we care about
-        if reaction.message.id != self.ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
+        if member.id == self.ready_message[member.guild].author.id:
+            return
+        # Check if this is a message we care about
+        if reaction.message.id != self.ready_message[member.guild].id:
+            return
+        # Check if this is a member and reaction we care about
+        if member not in self.members[member.guild] or reaction.emoji != '✅':
+            await self.ready_message[member.guild].remove_reaction(reaction, member)
             return
 
         self.reactors[member.guild].add(member)
@@ -730,6 +760,15 @@ class MatchCog(commands.Cog):
         if self.reactors[member.guild].issuperset(self.members[member.guild]):  # All queued members have reacted
             if self.future[member.guild] is not None:
                 self.future[member.guild].set_result(None)
+
+    async def _process_unready(self, reaction, member):
+        """ Check if all players in the queue have readied up. """
+        # Check if this is a reaction we care about
+        if reaction.message.id != self.ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
+            return
+
+        self.reactors[member.guild].remove(member)
+        await self.ready_message[member.guild].edit(embed=self._ready_embed(member))        
 
     async def start_match(self, ctx, members):
         """ Ready all the members up and start a match. """
@@ -754,17 +793,19 @@ class MatchCog(commands.Cog):
         await self.ready_message[ctx.guild].add_reaction('✅')
 
         self.bot.add_listener(self._process_ready, name='on_reaction_add')
+        self.bot.add_listener(self._process_unready, name='on_reaction_remove')
         try:
             await asyncio.wait_for(self.future[ctx.guild], 60)
         except asyncio.TimeoutError:  # Not everyone readied up
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
+            self.bot.remove_listener(self._process_unready, name='on_reaction_remove')
             unreadied = set(members) - self.reactors[ctx.guild]
             awaitables = [
                 self.ready_message[ctx.guild].clear_reactions(),
                 self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
-            description = '\n'.join(':heavy_multiplication_x:  ' + member.mention for member in unreadied)
+            description = '\n'.join(':x:  ' + member.mention for member in unreadied)
             title = self.bot.translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
@@ -775,12 +816,13 @@ class MatchCog(commands.Cog):
                 except (AttributeError, discord.errors.HTTPException):
                     pass
 
-            await self.ready_message[ctx.guild].edit(embed=burst_embed)
-            self.ready_message.pop(ctx.guild)
+            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
+            #self.ready_message.pop(ctx.guild)
             return False  # Not everyone readied up
         else:  # Everyone readied up
             # Attempt to make teams and start match
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
+            self.bot.remove_listener(self._process_unready, name='on_reaction_remove')
             awaitables = [
                 self.ready_message[ctx.guild].clear_reactions(),
                 self.bot.db_helper.get_guild(ctx.guild.id)
@@ -812,7 +854,7 @@ class MatchCog(commands.Cog):
 
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
-            await self.ready_message[ctx.guild].edit(embed=burst_embed)
+            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
 
             # Check if able to get a match server and edit message embed accordingly
             try:
@@ -821,8 +863,8 @@ class MatchCog(commands.Cog):
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
-                self.ready_message.pop(ctx.guild)
-                await ctx.guild.channels[index_channel].send(embed=burst_embed)
+                #self.ready_message.pop(ctx.guild)
+                await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
@@ -842,10 +884,9 @@ class MatchCog(commands.Cog):
                                       value='\n'.join(member.mention for member in team_two))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
-                await self.ready_message[ctx.guild].delete()
-                self.ready_message.pop(ctx.guild)
+                #self.ready_message.pop(ctx.guild)
                 
-            await ctx.guild.channels[index_channel].send(embed=burst_embed)
+            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
 
             return True  # Everyone readied up
@@ -990,16 +1031,16 @@ class MatchCog(commands.Cog):
         embed.add_field(name=f'__{self.bot.translate("inactive-maps")}__', value=inactive_maps)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='endmatch [match id]',
+    @commands.command(usage='end [match id]',
                       brief='Force end a match (must have admin perms)')
     @commands.has_permissions(administrator=True)                      
-    async def endmatch(self, ctx, *args):
+    async def end(self, ctx, *args):
         """ Test end match """
         if not await self.bot.isValidChannel(ctx):
             return
         
         if len(args) == 0:
-            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}endmatch <Match ID>`'
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
             try:
                 await self.bot.api_helper.end_match(args[0])
@@ -1009,12 +1050,12 @@ class MatchCog(commands.Cog):
                 msg = self.bot.translate("match-cancelled").format(args[0])
 
         embed = self.bot.embed_template(title=msg)
-        await ctx.send(embed=embed)        
+        await ctx.send(embed=embed)
 
     @teams.error
     @captains.error
     @maps.error
-    @endmatch.error
+    @end.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):

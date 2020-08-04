@@ -3,8 +3,8 @@
 
 import os
 
-icons_dic = 'assets/maps/icons/'
-maps = [_map for _map in os.listdir(icons_dic) if _map.endswith('.png') and '-' in _map and os.stat(icons_dic + _map).st_size < 256000]
+icons_dir = 'assets/maps/icons/'
+maps = [_map for _map in os.listdir(icons_dir) if _map.endswith('.png') and '-' in _map and os.stat(icons_dir + _map).st_size < 256000]
 
 class DBHelper:
     """ Class to contain database query wrapper functions. """
