@@ -41,7 +41,10 @@ class LeagueBot(commands.AutoShardedBot):
         self.str_category = str_category
         self.str_pug_role = str_pug_role
         self.str_alerts_role = str_alerts_role
-        self.int_remaining_alerts = int(int_remaining_alerts)
+        try:
+            self.int_remaining_alerts = int(int_remaining_alerts)
+        except ValueError:
+            self.int_remaining_alerts = 0
         self.str_text_queue = str_text_queue
         self.str_text_commands = str_text_commands
         self.str_text_results = str_text_results
