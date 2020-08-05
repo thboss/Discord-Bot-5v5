@@ -40,7 +40,7 @@
     DISCORD_LEAGUE_CATEGORY= # League category name, E.g. "league"
     DISCORD_LEAGUE_PUG_ROLE= # League role name, E.g. "linked"
     DISCORD_LEAGUE_ALERTS_ROLE= # League role name, E.g. "alerts"
-    DISCORD_LEAGUE_REMAINING_ALERTS=2 # send alerts when there are (n) remaining players to fill up the queue
+    DISCORD_LEAGUE_REMAINING_ALERTS=2 # send alerts when there are (n) remaining players to fill up the queue (blank to disable)
     DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name, E.g. "queue"
     DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name, E.g. "commands"
     DISCORD_LEAGUE_TEXT_RESULT= # League results channel name, E.g. "results"
@@ -81,7 +81,7 @@
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
-`q!endmatch <match id>` **-** Force end live match <br>
+`q!end <match id>` **-** Force end live match <br>
 
 
 ### Player commands
@@ -97,8 +97,3 @@
 `q!leaders` **-** See the top players in the server <br>
 
 `q!check` **-** Check if the player has been linked his account and give him role if so <br>
-
-`q!teams` **-** View the team creation method <br>
-
-`q!captains` **-** View the captain selection method <br>
-
