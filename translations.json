@@ -150,6 +150,7 @@
         "map-bans-begun":       "Пик карт начался!",
         "members-must-even":    "аргумент участников должен иметь четную длину",
         "vote-map-started":     "Голосование за карту началось! (1 мин)",
+        "maps":                 "Карты",
         "vote-map-footer":      "Нажмите на иконку карты ниже чтобы забанить её",
         "react-ready":          "Нажмите на {} внизу чтобы подтвердить готовность (1 min)",
         "queue-filled":         "Очередь заполнилась!",
@@ -164,6 +165,7 @@
         "server-connect":       "**URL:** {}\n**Консоль:** `{}`",
         "team":                 "Команда",
         "match":                "Матч #",
+        "match-over":           "Матч окончен",
         "server-message-footer":"Сервер закроется через 5 минут, если кто-то не зайдет",
         "team-method":          "Метод выбора команд {}",
         "team-method-already":  "Метод выбора команд уже {}",
@@ -203,7 +205,13 @@
         "first-blood-rate":     "Статистика первых убийств",
         "cannot-get-stats":     "Не могу вытащить статистику **{}**: Его аккаунт не зарегистрирован",
         "nobody-ranked":        "Никого нету в статистике на сервере!",
-        "server-leaderboard":   "Статистка CS:GO League Server"
+        "server-leaderboard":   "Статистка CS:GO League Server",
+        "invalid-usage":        "Неправильное использование",
+        "added-alerts":         "Бот теперь будет уведомлять {}",
+        "removed-alerts":       "Бот теперь не будет уведомлять {}",
+        "player":               "Игроки",
+        "invalid-match-id":     "Неверный Match ID",
+        "match-cancelled":      "Match ID **{}** отменен"
     },
     "tr": {
         "queue-is-empty":       "Sıra boş...",
