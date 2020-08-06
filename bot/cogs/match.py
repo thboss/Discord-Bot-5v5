@@ -864,7 +864,7 @@ class MatchCog(commands.Cog):
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
                 #self.ready_message.pop(ctx.guild)
-                await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
+                await self.ready_message[ctx.guild].edit(embed=burst_embed)
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
@@ -886,7 +886,7 @@ class MatchCog(commands.Cog):
 
                 #self.ready_message.pop(ctx.guild)
                 
-            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
+            await self.ready_message[ctx.guild].edit(embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
 
             return True  # Everyone readied up

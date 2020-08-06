@@ -129,7 +129,7 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon}'))
+                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
