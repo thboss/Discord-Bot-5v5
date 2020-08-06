@@ -114,7 +114,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     async def setup_emojis(self):
         """ Upload custom map emojis to guilds. """
-        url_path = 'https://raw.githubusercontent.com/csgo-league/csgo-league-bot/develop/assets/maps/icons/'
+        url_path = 'https://raw.githubusercontent.com/thboss/Discord-Bot-5v5/master/assets/maps/icons/'
         icons_dic = 'assets/maps/icons/'     
         icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
@@ -129,7 +129,7 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.split("-")[1]}'))
+                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon}'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
