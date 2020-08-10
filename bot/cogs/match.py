@@ -98,17 +98,31 @@ class TeamDraftMenu(discord.Message):
                 members_left_str += f':heavy_multiplication_x:  ~~{member.display_name}~~\n'
 
         embed.insert_field_at(1, name=f'__{self.bot.translate("players-left")}__', value=members_left_str)
+
+        status_str = ''
+
+        status_str += f'**{self.bot.translate("capt1")}:** {self.teams[0][0].mention}\n' if len(self.teams[0]) else f'**{self.bot.translate("capt1")}:**\n'
+        status_str += f'**{self.bot.translate("capt2")}:** {self.teams[1][0].mention}\n\n' if len(self.teams[1]) else f'**{self.bot.translate("capt2")}:**\n\n'
+        status_str += f'**{self.bot.translate("current-capt")}:** {self._active_picker.mention}' if self._active_picker is not None else f'**{self.bot.translate("current-capt")}:**'
+
+        embed.add_field(name=f'__{self.bot.translate("info")}__', value=status_str)
         return embed
 
     def _pick_player(self, picker, pickee):
         """ Process a team captain's player pick, assuming the picker is in the team draft. """
         picker_name = picker.nick if picker.nick is not None else picker.display_name
         # Get picking team
-        if self.teams[0] == []:
+        if picker == pickee:
+            raise PickError(self.bot.translate('picker-pick-self').format(picker_name))
+        elif self.teams[0] == []:
             picking_team = self.teams[0]
             self.members_left.remove(picker)
             picking_team.append(picker)
-        elif self.teams[1] == [] and picker != self.teams[0][0]:
+        elif self.teams[1] == [] and picker == self.teams[0][0]:
+            raise PickError(self.bot.translate('picker-not-turn').format(picker_name))
+        elif self.teams[1] == [] and picker in self.teams[0]:
+            raise PickError(self.bot.translate('picker-not-captain').format(picker_name))
+        elif self.teams[1] == []:
             picking_team = self.teams[1]
             self.members_left.remove(picker)
             picking_team.append(picker)
@@ -127,11 +141,9 @@ class TeamDraftMenu(discord.Message):
         if len(picking_team) > len(self.members) // 2:
             raise PickError(self.bot.translate('team-full').format(picker_name))
 
-        # Add pickee to team if user didn't pick themselves (which is only possible picking first as a volunteer)
-        if not picker == pickee:
-            self.members_left.remove(pickee)
-            picking_team.append(pickee)
-            self.pick_number += 1
+        self.members_left.remove(pickee)
+        picking_team.append(pickee)
+        self.pick_number += 1
 
     async def _update_menu(self, title):
         """ Update the message to reflect the current status of the team draft. """
@@ -167,7 +179,12 @@ class TeamDraftMenu(discord.Message):
 
             if self.future is not None:
                 self.future.set_result(None)
-
+            return
+        
+        if len(self.members_left) == 0:
+            await self._update_menu(title)
+            if self.future is not None:
+                self.future.set_result(None)
             return
 
         await self._update_menu(title)
@@ -262,9 +279,9 @@ class MapDraftMenu(discord.Message):
         status_str = ''
 
         if self.captains is not None and self._active_picker is not None:
-            status_str += self.bot.translate('map-draft-capt1').format(self.captains[0].mention)
-            status_str += self.bot.translate('map-draft-capt2').format(self.captains[1].mention)
-            status_str += self.bot.translate('map-draft-current').format(self._active_picker.mention)
+            status_str += f'**{self.bot.translate("capt1")}:** {self.captains[0].mention}'
+            status_str += f'**{self.bot.translate("capt2")}:** {self.captains[1].mention}'
+            status_str += f'**{self.bot.translate("current-capt")}:** {self._active_picker.mention}'
 
         embed.add_field(name=f'__{self.bot.translate("maps-left")}__', value=maps_str)
         embed.add_field(name=f'__{self.bot.translate("info")}__', value=status_str)
@@ -456,10 +473,11 @@ class MapVoteMenu(discord.Message):
         self.map_pool = None
         self.map_votes = None
         self.future = None
+        self.tie_count = 0
 
     def _vote_embed(self):
         embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        embed.add_field(name=f':map: __{self.bot.translate("maps")}__', value='\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
+        embed.add_field(name=f':repeat_one: :map: __{self.bot.translate("maps")}__', value='--------------------\n' + '\n'.join(f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name}' for m in self.map_pool))
         #embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool))
         embed.set_footer(text=self.bot.translate('vote-map-footer'))
         return embed
@@ -546,18 +564,21 @@ class MapVoteMenu(discord.Message):
             elif votes == winners_votes:
                 winners_emoji.append(emoji)
 
-        self.map_pool = [m for m in self.bot.maps if m.emoji in winners_emoji]
-        winners_maps = self.map_pool.copy()
+        self.map_pool = [m for m in mpool if m.emoji in winners_emoji]
 
+        # Return class to original state after map drafting is done
+        self.voted_users = None
         self.map_votes = None
-        self.voted_members = None
         self.future = None
-        self.map_pool = None
 
         if len(winners_emoji) == 1:
-            return [m for m in winners_maps if m.emoji == winners_emoji[0]][0]
+            return self.map_pool[0]
+        elif len(winners_emoji) == 2 and self.tie_count == 1:
+            return random.choice(self.map_pool)
         else:
-            return await self.vote(winners_maps)
+            if len(winners_emoji) == 2:
+                self.tie_count += 1
+            return await self.vote(self.map_pool)
 
 
 class MatchCog(commands.Cog):
@@ -735,11 +756,11 @@ class MatchCog(commands.Cog):
         embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
         for member in self.members[ctx.guild]:
             if member not in self.reactors[ctx.guild]:
-                str_value += f':x:  {member.nick if member.nick is not None else member.display_name}\n'
+                str_value += f':heavy_multiplication_x:  {member.mention}\n'
             else:
-                str_value += f'✅  {member.nick if member.nick is not None else member.display_name}\n'
+                str_value += f'✅  {member.mention}\n'
 
-        embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__", value=str_value)
+        embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__", value='-------------------\n' + str_value)
         del str_value, description
         return embed
 
@@ -759,16 +780,7 @@ class MatchCog(commands.Cog):
         await self.ready_message[member.guild].edit(embed=self._ready_embed(member))
         if self.reactors[member.guild].issuperset(self.members[member.guild]):  # All queued members have reacted
             if self.future[member.guild] is not None:
-                self.future[member.guild].set_result(None)
-
-    async def _process_unready(self, reaction, member):
-        """ Check if all players in the queue have readied up. """
-        # Check if this is a reaction we care about
-        if reaction.message.id != self.ready_message[member.guild].id or member not in self.members[member.guild] or reaction.emoji != '✅':
-            return
-
-        self.reactors[member.guild].remove(member)
-        await self.ready_message[member.guild].edit(embed=self._ready_embed(member))        
+                self.future[member.guild].set_result(None)       
 
     async def start_match(self, ctx, members):
         """ Ready all the members up and start a match. """
@@ -793,12 +805,10 @@ class MatchCog(commands.Cog):
         await self.ready_message[ctx.guild].add_reaction('✅')
 
         self.bot.add_listener(self._process_ready, name='on_reaction_add')
-        self.bot.add_listener(self._process_unready, name='on_reaction_remove')
         try:
             await asyncio.wait_for(self.future[ctx.guild], 60)
         except asyncio.TimeoutError:  # Not everyone readied up
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
-            self.bot.remove_listener(self._process_unready, name='on_reaction_remove')
             unreadied = set(members) - self.reactors[ctx.guild]
             awaitables = [
                 self.ready_message[ctx.guild].clear_reactions(),
@@ -822,7 +832,6 @@ class MatchCog(commands.Cog):
         else:  # Everyone readied up
             # Attempt to make teams and start match
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
-            self.bot.remove_listener(self._process_unready, name='on_reaction_remove')
             awaitables = [
                 self.ready_message[ctx.guild].clear_reactions(),
                 self.bot.db_helper.get_guild(ctx.guild.id)

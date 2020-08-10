@@ -229,15 +229,18 @@ class QueueCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
+        self.block_lobby[ctx.guild] = True
         await self.bot.db_helper.delete_all_queued_users(ctx.guild.id)
         msg = self.bot.translate('queue-emptied')
         embed = await self.queue_embed(ctx.guild, msg)
 
         channel_id = await self.bot.get_guild_data(ctx.guild, 'voice_lobby')
         voice_lobby = ctx.bot.get_channel(channel_id)
+
         for player in voice_lobby.members:
             await player.move_to(None)
-        
+
+        self.block_lobby[ctx.guild] = False
         _embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=_embed)
         # Update queue display message
@@ -278,6 +281,7 @@ class QueueCog(commands.Cog):
                 elif new_cap < 2 or new_cap > 100:
                     embed = self.bot.embed_template(title=self.bot.translate('capacity-out-range'))
                 else:
+                    self.block_lobby[ctx.guild] = True
                     await self.bot.db_helper.delete_all_queued_users(ctx.guild.id)
                     await self.bot.db_helper.update_guild(ctx.guild.id, capacity=new_cap)
                     embed = self.bot.embed_template(title=self.bot.translate('set-capacity').format(new_cap))
@@ -288,6 +292,7 @@ class QueueCog(commands.Cog):
                     for player in voice_lobby.members:
                         await player.move_to(None)
 
+                    self.block_lobby[ctx.guild] = False
                     await voice_lobby.edit(user_limit=new_cap)
 
         await ctx.send(embed=embed)
