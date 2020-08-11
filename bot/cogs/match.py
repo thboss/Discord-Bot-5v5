@@ -279,8 +279,8 @@ class MapDraftMenu(discord.Message):
         status_str = ''
 
         if self.captains is not None and self._active_picker is not None:
-            status_str += f'**{self.bot.translate("capt1")}:** {self.captains[0].mention}'
-            status_str += f'**{self.bot.translate("capt2")}:** {self.captains[1].mention}'
+            status_str += f'**{self.bot.translate("capt1")}:** {self.captains[0].mention}\n'
+            status_str += f'**{self.bot.translate("capt2")}:** {self.captains[1].mention}\n\n'
             status_str += f'**{self.bot.translate("current-capt")}:** {self._active_picker.mention}'
 
         embed.add_field(name=f'__{self.bot.translate("maps-left")}__', value=maps_str)
@@ -477,8 +477,9 @@ class MapVoteMenu(discord.Message):
 
     def _vote_embed(self):
         embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        embed.add_field(name=f':repeat_one: :map: __{self.bot.translate("maps")}__', value='--------------------\n' + '\n'.join(f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name}' for m in self.map_pool))
-        #embed.add_field(name="Votes", value='\n\n'.join(emoji_numbers[self.map_votes[m.emoji]] for m in self.map_pool))
+        str_value = '--------------------\n'
+        str_value += '\n'.join(f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name} {":star:" if self.map_votes[m.emoji] == max(self.map_votes.values()) else ""}' for m in self.map_pool)
+        embed.add_field(name=f':repeat_one: :map: __{self.bot.translate("maps")}__', value=str_value)
         embed.set_footer(text=self.bot.translate('vote-map-footer'))
         return embed
 
@@ -494,7 +495,7 @@ class MapVoteMenu(discord.Message):
 
         if member in self.voted_members:
             await self.remove_reaction(self.voted_members[member], member)
-            self.map_votes[self.voted_members[member]] -= 1
+            return
         # Add map vote if it is valid
         self.map_votes[str(reaction)] += 1
 
@@ -504,26 +505,6 @@ class MapVoteMenu(discord.Message):
         if len(self.voted_members) == len(self.members):
             if self.future is not None:
                 self.future.set_result(None)
-
-    async def _process_unvote(self, reaction, member):
-        """"""
-        # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or member == self.author:
-            return
-
-        if member not in self.members or str(reaction) not in [m.emoji for m in self.map_pool]:
-            return
-
-        if member in self.voted_members and str(reaction) != self.voted_members[member]:
-            return
-
-        if member not in self.voted_members:
-            return
-        # Add map vote if it is valid
-        self.map_votes[str(reaction)] -= 1
-
-        self.voted_members.pop(member)
-        await self.edit(embed=self._vote_embed())
 
     async def vote(self, mpool):
         """"""
@@ -538,7 +519,6 @@ class MapVoteMenu(discord.Message):
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
         self.bot.add_listener(self._process_vote, name='on_reaction_add')
-        self.bot.add_listener(self._process_unvote, name='on_reaction_remove')
 
         try:
             await asyncio.wait_for(self.future, 60)
@@ -546,7 +526,6 @@ class MapVoteMenu(discord.Message):
             pass
 
         self.bot.remove_listener(self._process_vote, name='on_reaction_add')
-        self.bot.remove_listener(self._process_unvote, name='on_reaction_remove')
         try:
             await self.clear_reactions()
         except NotFound:
@@ -742,7 +721,11 @@ class MatchCog(commands.Cog):
             return
 
         match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
-        self.bot.api_helper.get_live_matches().pop(match_id)
+        
+        try:
+            self.bot.api_helper.get_live_matches().pop(match_id)
+        except KeyError:
+            pass
 
         try:
             if match_id in self.match_dict[message.guild]:

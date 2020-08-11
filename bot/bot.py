@@ -106,9 +106,6 @@ class LeagueBot(commands.AutoShardedBot):
         channel_id = await self.get_guild_data(ctx.guild, 'text_commands')
         commands_channel = self.get_channel(channel_id)
         if ctx.message.channel != commands_channel:
-            msg = f'This command disallowed here! Use {commands_channel.mention}'
-            embed = self.embed_template(description=msg)
-            await ctx.send(embed=embed)
             return False
         return True              
 
