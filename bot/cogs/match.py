@@ -478,14 +478,14 @@ class MapVoteMenu(discord.Message):
     def _vote_embed(self):
         embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
         str_value = '--------------------\n'
-        str_value += '\n'.join(f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name} {":star:" if self.map_votes[m.emoji] == max(self.map_votes.values()) else ""}' for m in self.map_pool)
+        str_value += '\n'.join(f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name} {":small_orange_diamond:" if self.map_votes[m.emoji] == max(self.map_votes.values()) and self.map_votes[m.emoji] != 0 else ""}' for m in self.map_pool)
         embed.add_field(name=f':repeat_one: :map: __{self.bot.translate("maps")}__', value=str_value)
         embed.set_footer(text=self.bot.translate('vote-map-footer'))
         return embed
 
     async def _process_vote(self, reaction, member):
         """"""
-        # Check that reaction is on this message and user is a captain
+        # Check that reaction is on this message and user is not the bot
         if reaction.message.id != self.id or member == self.author:
             return
 
@@ -494,7 +494,7 @@ class MapVoteMenu(discord.Message):
             return
 
         if member in self.voted_members:
-            await self.remove_reaction(self.voted_members[member], member)
+            await self.remove_reaction(reaction, member)
             return
         # Add map vote if it is valid
         self.map_votes[str(reaction)] += 1
