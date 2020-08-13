@@ -105,16 +105,15 @@ class QueueCog(commands.Cog):
                     if len(queue_ids) == capacity:
                         self.block_lobby[member.guild] = True
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
-                        try:
-                            all_readied = await match_cog.start_match(member, queue_members)
-                        except asyncio.TimeoutError:
-                            self.block_lobby[member.guild] = False
-                            return
+                        all_readied = await match_cog.start_match(member, queue_members)
 
                         if all_readied:
                             await self.bot.db_helper.delete_queued_users(member.guild.id, *queue_ids)
 
                         self.block_lobby[member.guild] = False
+                        title = self.bot.translate('players-in-queue')
+                        embed = await self.queue_embed(member.guild, title)
+                        await self.update_last_msg(member, embed) 
                         return
 
             embed = await self.queue_embed(member.guild, title)

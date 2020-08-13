@@ -5,6 +5,7 @@
         "discord-not-linked":   "{} Your discord is not linked to steam account",
         "discord-get-role":     "**{} You've got {} role and access to join the Lobby**",
         "account-not-linked":   "Unable to add **{}**: Account is not linked",
+        "players-in-queue":     "Current players in the queue",
         "already-in-queue":     "Unable to add **{}**: Already in the queue",
         "queue-is-full":        "Unable to add **{}**: Queue is full",
         "cannot-verify-match":  "Unable to add **{}**: Cannot verify match status",
