@@ -822,7 +822,7 @@ class MatchCog(commands.Cog):
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
             team_method = results[1]['team_method']
             map_method = results[1]['map_method']
-            mpool = [m for m in self.bot.maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
+            mpool = [m for m in self.bot.all_maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
             if team_method == 'random' or len(members) == 2:
                 team_one, team_two = await self.randomize_teams(members)
@@ -976,7 +976,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_pool = [m.dev_name for m in self.bot.maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
+        map_pool = [m.dev_name for m in self.bot.all_maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
         if len(args) == 0:
             embed = self.bot.embed_template(title=self.bot.translate('map-pool'))
@@ -986,7 +986,7 @@ class MatchCog(commands.Cog):
 
             for arg in args:
                 map_name = arg[1:]  # Remove +/- prefix
-                map_obj = next((m for m in self.bot.maps if m.dev_name == map_name), None)
+                map_obj = next((m for m in self.bot.all_maps if m.dev_name == map_name), None)
 
                 if map_obj is None:
                     description += '\u2022 ' + self.bot.translate('could-not-interpret').format(arg)
@@ -1005,7 +1005,7 @@ class MatchCog(commands.Cog):
             if len(map_pool) < 3:
                 description = self.bot.translate('map-pool-fewer-3')
             else:
-                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.maps}
+                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.all_maps}
                 await self.bot.db_helper.update_guild(ctx.guild.id, **map_pool_data)
 
             embed = self.bot.embed_template(title=self.bot.translate('modified-map-pool'), description=description)
@@ -1013,8 +1013,8 @@ class MatchCog(commands.Cog):
             if any_wrong_arg:  # Add example usage footer if command was used incorrectly
                 embed.set_footer(text=f'Ex: {self.bot.command_prefix[0]}mpool +de_cache -de_mirage')
 
-        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.maps if m.dev_name in map_pool)
-        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.maps if m.dev_name not in map_pool)
+        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps if m.dev_name in map_pool)
+        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps if m.dev_name not in map_pool)
 
         if not inactive_maps:
             inactive_maps = f'*{self.bot.translate("none")}*'

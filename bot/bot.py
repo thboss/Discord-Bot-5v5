@@ -28,8 +28,7 @@ class Map:
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
-    def __init__(self, discord_token, api_base_url, api_key, str_category, str_pug_role, str_alerts_role, int_remaining_alerts,
-                str_text_queue, str_text_commands, str_text_results, str_voice_lobby, language, db_pool):
+    def __init__(self, discord_token, api_base_url, api_key, db_pool):
         """ Set attributes and configure bot. """
         # Call parent init
         super().__init__(command_prefix=('q!', 'Q!'), case_insensitive=True)
@@ -38,20 +37,20 @@ class LeagueBot(commands.AutoShardedBot):
         self.discord_token = discord_token
         self.api_base_url = api_base_url
         self.api_key = api_key
-        self.str_category = str_category
-        self.str_pug_role = str_pug_role
-        self.str_alerts_role = str_alerts_role
+        self.str_category = os.environ['DISCORD_LEAGUE_CATEGORY']
+        self.str_pug_role = os.environ['DISCORD_LEAGUE_PUG_ROLE']
+        self.str_alerts_role = os.environ['DISCORD_LEAGUE_ALERTS_ROLE']
         try:
-            self.int_remaining_alerts = int(int_remaining_alerts)
+            self.int_remaining_alerts = int(os.environ['DISCORD_LEAGUE_REMAINING_ALERTS'])
         except ValueError:
             self.int_remaining_alerts = 0
-        self.str_text_queue = str_text_queue
-        self.str_text_commands = str_text_commands
-        self.str_text_results = str_text_results
-        self.str_voice_lobby = str_voice_lobby
-        self.language = language
+        self.str_text_queue = os.environ['DISCORD_LEAGUE_TEXT_QUEUE']
+        self.str_text_commands = os.environ['DISCORD_LEAGUE_TEXT_COMMANDS']
+        self.str_text_results = os.environ['DISCORD_LEAGUE_TEXT_RESULT']
+        self.str_voice_lobby = os.environ['DISCORD_LEAGUE_VOICE_LOBBY']
+        self.language = os.environ['DISCORD_LEAGUE_LANGUAGE']
         self.db_pool = db_pool
-        self.maps = []
+        self.all_maps = []
 
         with open('translations.json', 'r') as f:
             self.translations = json.load(f)
@@ -59,7 +58,7 @@ class LeagueBot(commands.AutoShardedBot):
         # Set constants
         self.description = 'An easy to use, fully automated system to set up and play CS:GO pickup games'
         self.color = 0x000000
-        self.activity = discord.Activity(type=discord.ActivityType.watching, name="github.com/csgo-league")
+        self.activity = discord.Activity(type=discord.ActivityType.watching, name="TheBO$$#2967")
 
         # Create session for API
         self.session = aiohttp.ClientSession(loop=self.loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
@@ -126,7 +125,7 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
+                self.all_maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
