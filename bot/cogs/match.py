@@ -723,11 +723,6 @@ class MatchCog(commands.Cog):
         match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
         
         try:
-            self.bot.api_helper.get_live_matches().pop(match_id)
-        except KeyError:
-            pass
-
-        try:
             if match_id in self.match_dict[message.guild]:
                 await self.delete_match_channels(message, match_id)
         except KeyError:
@@ -1027,19 +1022,17 @@ class MatchCog(commands.Cog):
                       brief='Force end a match (must have admin perms)')
     @commands.has_permissions(administrator=True)                      
     async def end(self, ctx, *args):
-        """ Test end match """
+        """ Force end a match. """
         if not await self.bot.isValidChannel(ctx):
             return
         
         if len(args) == 0:
             msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
-            try:
-                await self.bot.api_helper.end_match(args[0])
-            except KeyError:
-                msg = self.bot.translate("invalid-match-id")
-            else:
+            if await self.bot.api_helper.end_match(args[0]):
                 msg = self.bot.translate("match-cancelled").format(args[0])
+            else:
+                msg = self.bot.translate("invalid-match-id")
 
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)

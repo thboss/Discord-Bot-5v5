@@ -154,9 +154,6 @@ class Player:
             return 0
 
 
-live_matches = {}
-
-
 class MatchServer:
     """ Represents a match server with the contents returned by the API. """
 
@@ -165,10 +162,6 @@ class MatchServer:
         self.id = json['match_id']
         self.ip = json['ip']
         self.port = json['port']
-        live_matches[str(self.id)] = {
-            'ip': self.ip,
-            'port': self.port
-        }
 
     @property
     def get_match_id(self):
@@ -251,15 +244,13 @@ class ApiHelper:
             players = await resp.json()
             return [Player(player_data, self.base_url) for player_data in players]
 
-    def get_live_matches(self):
-        return live_matches
-
     async def end_match(self, match_id):
-        """ Test end match"""
+        """ Force end a match through the API. """
         url = f'{self.base_url}/match/end/{match_id}'
 
-        async with self.session.post(url=url, headers=self.headers, json=live_matches[match_id]) as resp:
-            return await resp.json()
+        async with self.session.get(url=url, headers=self.headers) as resp:
+            resp_json = await resp.json()
+            return resp_json['success']
 
     async def start_match(self, team_one, team_two, map_name):
         """ Get a match server from the API. """
