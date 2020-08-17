@@ -59,7 +59,6 @@ class QueueCog(commands.Cog):
         if before.channel == voice_lobby and after.channel == voice_lobby:
             return
 
-        name = member.nick if member.nick is not None else member.display_name
         match_cog = self.bot.get_cog('MatchCog')
 
         if after.channel is not None:
@@ -67,7 +66,7 @@ class QueueCog(commands.Cog):
                 return
 
             if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
-                title = self.bot.translate('account-not-linked').format(name)
+                title = self.bot.translate('account-not-linked').format(member.display_name)
             else:  # Message author is linked
                 awaitables = [
                     self.bot.api_helper.get_player(member.id),
@@ -81,17 +80,17 @@ class QueueCog(commands.Cog):
                 capacity = results[3]['capacity']
 
                 if member.id in queue_ids:  # Author already in queue
-                    title = self.bot.translate('already-in-queue').format(name)
+                    title = self.bot.translate('already-in-queue').format(member.display_name)
                 elif len(queue_ids) >= capacity:  # Queue full
-                    title = self.bot.translate('queue-is-full').format(name)
+                    title = self.bot.translate('queue-is-full').format(member.display_name)
                 elif not player:  # ApiHelper couldn't get player
-                    title = self.bot.translate('cannot-verify-match').format(name)
+                    title = self.bot.translate('cannot-verify-match').format(member.display_name)
                 elif player.in_match:  # member is already in a match
-                    title = self.bot.translate('already-in-match').format(name)
+                    title = self.bot.translate('already-in-match').format(member.display_name)
                 else:  # member can be added
                     await self.bot.db_helper.insert_queued_users(member.guild.id, member.id)
                     queue_ids += [member.id]
-                    title = self.bot.translate('added-to-queue').format(name)
+                    title = self.bot.translate('added-to-queue').format(member.display_name)
 
                     if capacity - len(queue_ids) == self.bot.int_remaining_alerts and self.bot.int_remaining_alerts != 0:
                         channel_id = await self.bot.get_guild_data(member.guild, 'text_queue')
@@ -123,21 +122,13 @@ class QueueCog(commands.Cog):
         if before.channel is not None:
             if before.channel != voice_lobby or self.block_lobby[member.guild]:
                 return
-
-            awaitables = [
-                self.bot.db_helper.get_queued_users(member.guild.id),
-                self.bot.db_helper.get_guild(member.guild.id)
-            ]
-            results = await asyncio.gather(*awaitables, loop=self.bot.loop)
-            queue_ids = results[0]
-            capacity = results[1]['capacity']
                     
             removed = await self.bot.db_helper.delete_queued_users(member.guild.id, member.id)
 
             if member.id in removed:
-                title = self.bot.translate('removed-from-queue').format(name)
+                title = self.bot.translate('removed-from-queue').format(member.display_name)
             else:
-                title = self.bot.translate('not-in-queue').format(name)
+                title = self.bot.translate('not-in-queue').format(member.display_name)
                                 
             embed = await self.queue_embed(member.guild, title)
             # Update queue display message
@@ -202,12 +193,11 @@ class QueueCog(commands.Cog):
             await ctx.send(embed=embed)
         else:
             removed = await self.bot.db_helper.delete_queued_users(ctx.guild.id, removee.id)
-            name = removee.nick if removee.nick is not None else removee.display_name
 
             if removee.id in removed:
-                title = self.bot.translate('removed-from-queue').format(name)
+                title = self.bot.translate('removed-from-queue').format(removee.display_name)
             else:
-                title = self.bot.translate('removed-not-in-queue').format(name)
+                title = self.bot.translate('removed-not-in-queue').format(removee.display_name)
 
             embed = await self.queue_embed(ctx.guild, title)
 

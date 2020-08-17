@@ -14,6 +14,7 @@ import sys
 import traceback
 import os
 
+
 class Map:
     """ A group of attributes representing a map. """
 
@@ -85,7 +86,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
         self.add_cog(cogs.StatsCog(self))
-    
+
     def translate(self, text):
         try:
             return self.translations[self.language][text]
@@ -106,15 +107,15 @@ class LeagueBot(commands.AutoShardedBot):
         commands_channel = self.get_channel(channel_id)
         if ctx.message.channel != commands_channel:
             return False
-        return True              
+        return True
 
     async def setup_emojis(self):
         """ Upload custom map emojis to guilds. """
         url_path = 'https://raw.githubusercontent.com/thboss/Discord-Bot-5v5/master/assets/maps/icons/'
-        icons_dic = 'assets/maps/icons/'     
+        icons_dic = 'assets/maps/icons/'
         icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
-        
+
         for icon in icons:
             if icon.endswith('.png') and '-' in icon and os.stat(icons_dic + icon).st_size < 256000:
                 emoji_name = icon.split('-')[0]
@@ -125,15 +126,16 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.all_maps.append(Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
+                self.all_maps.append(
+                    Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
 
     async def setup_channels(self):
         """ Setup required channels on guilds. """
-        for guild in self.guilds:      
+        for guild in self.guilds:
             categories = [n.name for n in guild.categories]
             roles = [n.name for n in guild.roles]
             channels = [n.name for n in guild.channels]
-            everyone_role = get(guild.roles, name='@everyone')          
+            everyone_role = get(guild.roles, name='@everyone')
 
             if self.str_category in categories:
                 categ = get(guild.categories, name=self.str_category)
@@ -169,7 +171,7 @@ class LeagueBot(commands.AutoShardedBot):
                 voice_channel_lobby = get(guild.channels, name=self.str_voice_lobby)
             else:
                 voice_channel_lobby = await guild.create_voice_channel(name=self.str_voice_lobby,
-                                                                       category=categ, user_limit=10)                
+                                                                       category=categ, user_limit=10)
 
             await self.db_helper.update_guild(guild.id, category=categ.id),
             await self.db_helper.update_guild(guild.id, pug_role=pug_role.id),
@@ -198,7 +200,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
-        await self.db_helper.delete_guilds(guild.id)            
+        await self.db_helper.delete_guilds(guild.id)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
