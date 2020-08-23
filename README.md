@@ -1,5 +1,7 @@
 # Forked from [csgo-league-bot](https://github.com/csgo-league/csgo-league-bot)
 
+# [REQUIRED THIS VERSION OF WEB](https://github.com/thboss/csgo-league-web)
+
 ## Setup
 1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server before launch the bot.
 
