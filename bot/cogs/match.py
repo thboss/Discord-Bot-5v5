@@ -727,10 +727,7 @@ class MatchCog(commands.Cog):
         panel_url = f'{self.bot.api_helper.base_url}/match/'
         if panel_url not in message.embeds[0].description:
             return
-
-        if '0:0' in message.embeds[0].author.name:
-            return
-
+            
         match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
 
         try:
@@ -856,10 +853,16 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
             await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
 
+            results_channel = discord.utils.get(ctx.guild.channels, name=self.bot.str_text_results)
+            webhook = await results_channel.webhooks()
+
+            if not webhook:
+                webhook.append(await results_channel.create_webhook(name='League Results'))
+
             # Check if able to get a match server and edit message embed accordingly
             try:
                 match = await self.bot.api_helper.start_match(team_one, team_two,
-                                                              map_pick.dev_name)  # Request match from API
+                                                              map_pick.dev_name, webhook[0].url)  # Request match from API
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
