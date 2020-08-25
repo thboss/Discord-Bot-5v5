@@ -45,9 +45,9 @@ class LeagueBot(commands.AutoShardedBot):
             self.int_remaining_alerts = int(os.environ['DISCORD_LEAGUE_REMAINING_ALERTS'])
         except ValueError:
             self.int_remaining_alerts = 0
-        self.str_text_queue = os.environ['DISCORD_LEAGUE_TEXT_QUEUE']
-        self.str_text_commands = os.environ['DISCORD_LEAGUE_TEXT_COMMANDS']
-        self.str_text_results = os.environ['DISCORD_LEAGUE_TEXT_RESULT']
+        self.str_text_queue = os.environ['DISCORD_LEAGUE_TEXT_QUEUE'].lower()
+        self.str_text_commands = os.environ['DISCORD_LEAGUE_TEXT_COMMANDS'].lower()
+        self.str_text_results = os.environ['DISCORD_LEAGUE_TEXT_RESULT'].lower()
         self.str_voice_lobby = os.environ['DISCORD_LEAGUE_VOICE_LOBBY']
         self.language = os.environ['DISCORD_LEAGUE_LANGUAGE']
         self.db_pool = db_pool
@@ -59,7 +59,7 @@ class LeagueBot(commands.AutoShardedBot):
         # Set constants
         self.description = 'An easy to use, fully automated system to set up and play CS:GO pickup games'
         self.color = 0x000000
-        self.activity = discord.Activity(type=discord.ActivityType.watching, name="TheBO$$#2967")
+        self.activity = discord.Activity(type=discord.ActivityType.watching, name="CS:GO League")
 
         # Create session for API
         self.session = aiohttp.ClientSession(loop=self.loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
