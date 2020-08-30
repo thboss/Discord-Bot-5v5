@@ -577,6 +577,7 @@ class MatchCog(commands.Cog):
         """ Set attributes. """
         self.bot = bot
         self.members = {}
+        self.queue_profiles = {}
         self.reactors = {}
         self.future = {}
         self.ready_message = {}
@@ -740,11 +741,12 @@ class MatchCog(commands.Cog):
         str_value = ''
         description = self.bot.translate('react-ready').format('✅')
         embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
-        for member in self.members[ctx.guild]:
+        
+        for num, member in enumerate(self.members[ctx.guild], start=1):
             if member not in self.reactors[ctx.guild]:
-                str_value += f':heavy_multiplication_x:  {member.mention}\n'
+                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[ctx.guild][num-1].league_profile})\n'
             else:
-                str_value += f'✅  {member.mention}\n'
+                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[ctx.guild][num-1].league_profile})\n'
 
         embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__",
                         value='-------------------\n' + str_value)
@@ -775,6 +777,7 @@ class MatchCog(commands.Cog):
         self.members[ctx.guild] = members
         self.reactors[ctx.guild] = set()  # Track who has readied up
         self.future[ctx.guild] = self.bot.loop.create_future()
+        self.queue_profiles[ctx.guild] = await self.bot.api_helper.get_players([member.id for member in members])
 
         queue_cog = self.bot.get_cog('QueueCog')
         member_mentions = [member.mention for member in members]
@@ -803,7 +806,8 @@ class MatchCog(commands.Cog):
                 self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
-            description = '\n'.join(':x:  ' + member.mention for member in unreadied)
+            unreadied_profiles = await self.bot.api_helper.get_players([member.id for member in unreadied])
+            description = ''.join(f'{num}. [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
             title = self.bot.translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
@@ -815,7 +819,6 @@ class MatchCog(commands.Cog):
                     pass
 
             await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
-            # self.ready_message.pop(ctx.guild)
             return False  # Not everyone readied up
         else:  # Everyone readied up
             # Attempt to make teams and start match
@@ -872,6 +875,17 @@ class MatchCog(commands.Cog):
                 return False
             else:
                 await asyncio.sleep(3)
+
+                if len(team_one) <= 1:
+                    team1_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_one]
+                else:
+                    team1_profiles = await self.bot.api_helper.get_players([member.id for member in team_one])
+
+                if len(team_two) <= 1:
+                    team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
+                else:
+                    team2_profiles = await self.bot.api_helper.get_players([member.id for member in team_two])
+
                 match_id = str(match.get_match_id)
                 match_url = f'{self.bot.api_helper.base_url}/match/{match_id}'
                 description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command)
@@ -880,12 +894,10 @@ class MatchCog(commands.Cog):
                 burst_embed.set_author(name=f'{self.bot.translate("match")}{match_id}', url=match_url)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
                 burst_embed.add_field(name=f'__{self.bot.translate("team")} {team_one[0].display_name}__',
-                                      value='\n'.join(member.mention for member in team_one))
+                                      value=''.join(f'{num}. [{member.display_name}]({team1_profiles[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
                 burst_embed.add_field(name=f'__{self.bot.translate("team")} {team_two[0].display_name}__',
-                                      value='\n'.join(member.mention for member in team_two))
+                                      value=''.join(f'{num}. [{member.display_name}]({team2_profiles[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
-
-                # self.ready_message.pop(ctx.guild)
 
             await self.ready_message[ctx.guild].edit(embed=burst_embed)
             await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)

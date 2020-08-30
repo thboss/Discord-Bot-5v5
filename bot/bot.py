@@ -188,7 +188,7 @@ class LeagueBot(commands.AutoShardedBot):
             await self.db_helper.delete_all_queued_users(guild.id)
             for member in voice_channel_lobby.members:
                 await member.move_to(None)
-                asyncio.sleep(1)
+                await asyncio.sleep(1)
 
     @commands.Cog.listener()
     async def on_ready(self):

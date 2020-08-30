@@ -1,6 +1,7 @@
 # queue.py
 
 from discord.ext import commands
+from discord.utils import get
 from discord.errors import NotFound
 from collections import defaultdict
 import asyncio
@@ -20,6 +21,10 @@ class QueueCog(commands.Cog):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(guild.id)
         capacity = await self.bot.get_guild_data(guild, 'capacity')
+        if len(queued_ids) <= 1:
+            profiles = [await self.bot.api_helper.get_player(member_id) for member_id in queued_ids]
+        else:
+            profiles = await self.bot.api_helper.get_players([member_id for member_id in queued_ids])
 
         if title:
             title += f' ({len(queued_ids)}/{capacity})'
@@ -27,7 +32,7 @@ class QueueCog(commands.Cog):
         if len(queued_ids) == 0:  # If there are no members in the queue
             queue_str = f'_{self.bot.translate("queue-is-empty")}_'
         else:  # members still in queue
-            queue_str = ''.join(f'{num}. <@{member_id}>\n' for num, member_id in enumerate(queued_ids, start=1))
+            queue_str = ''.join(f'{num}. [{guild.get_member(member_id).display_name}]({profiles[num-1].league_profile})\n' for num, member_id in enumerate(queued_ids, start=1))
 
         embed = self.bot.embed_template(title=title, description=queue_str)
         embed.set_footer(text=self.bot.translate('receive-notification'))
