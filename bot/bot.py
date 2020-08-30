@@ -184,6 +184,11 @@ class LeagueBot(commands.AutoShardedBot):
             await text_channel_results.set_permissions(everyone_role, send_messages=False),
             await voice_channel_lobby.set_permissions(everyone_role, connect=False),
             await voice_channel_lobby.set_permissions(pug_role, connect=True)
+            # Empty queue users on bot start
+            await self.db_helper.delete_all_queued_users(guild.id)
+            for member in voice_channel_lobby.members:
+                await member.move_to(None)
+                asyncio.sleep(1)
 
     @commands.Cog.listener()
     async def on_ready(self):
