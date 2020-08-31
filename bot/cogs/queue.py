@@ -21,10 +21,7 @@ class QueueCog(commands.Cog):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(guild.id)
         capacity = await self.bot.get_guild_data(guild, 'capacity')
-        if len(queued_ids) <= 1:
-            profiles = [await self.bot.api_helper.get_player(member_id) for member_id in queued_ids]
-        else:
-            profiles = await self.bot.api_helper.get_players([member_id for member_id in queued_ids])
+        profiles = [await self.bot.api_helper.get_player(member_id) for member_id in queued_ids]
 
         if title:
             title += f' ({len(queued_ids)}/{capacity})'

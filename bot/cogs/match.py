@@ -777,7 +777,7 @@ class MatchCog(commands.Cog):
         self.members[ctx.guild] = members
         self.reactors[ctx.guild] = set()  # Track who has readied up
         self.future[ctx.guild] = self.bot.loop.create_future()
-        self.queue_profiles[ctx.guild] = await self.bot.api_helper.get_players([member.id for member in members])
+        self.queue_profiles[ctx.guild] = [await self.bot.api_helper.get_player(member.id) for member in members]
 
         queue_cog = self.bot.get_cog('QueueCog')
         member_mentions = [member.mention for member in members]
@@ -806,8 +806,8 @@ class MatchCog(commands.Cog):
                 self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
-            unreadied_profiles = await self.bot.api_helper.get_players([member.id for member in unreadied])
-            description = ''.join(f'{num}. [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
+            unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
+            description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
             title = self.bot.translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
@@ -876,15 +876,8 @@ class MatchCog(commands.Cog):
             else:
                 await asyncio.sleep(3)
 
-                if len(team_one) <= 1:
-                    team1_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_one]
-                else:
-                    team1_profiles = await self.bot.api_helper.get_players([member.id for member in team_one])
-
-                if len(team_two) <= 1:
-                    team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
-                else:
-                    team2_profiles = await self.bot.api_helper.get_players([member.id for member in team_two])
+                team1_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_one]
+                team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
 
                 match_id = str(match.get_match_id)
                 match_url = f'{self.bot.api_helper.base_url}/match/{match_id}'
