@@ -1048,9 +1048,12 @@ class MatchCog(commands.Cog):
         if len(args) == 0:
             msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
-            if await self.bot.api_helper.end_match(args[0]):
-                msg = self.bot.translate("match-cancelled").format(args[0])
-            else:
+            try:
+                if args[0] in self.match_dict[ctx.guild] and await self.bot.api_helper.end_match(args[0]):
+                    msg = self.bot.translate("match-cancelled").format(args[0])
+                else:
+                    msg = self.bot.translate("invalid-match-id")
+            except KeyError:
                 msg = self.bot.translate("invalid-match-id")
 
         embed = self.bot.embed_template(title=msg)
