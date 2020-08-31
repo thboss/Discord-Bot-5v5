@@ -869,7 +869,6 @@ class MatchCog(commands.Cog):
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
-                # self.ready_message.pop(ctx.guild)
                 await self.ready_message[ctx.guild].edit(embed=burst_embed)
                 traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
@@ -879,12 +878,11 @@ class MatchCog(commands.Cog):
                 team1_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_one]
                 team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
 
-                match_id = str(match.get_match_id)
-                match_url = f'{self.bot.api_helper.base_url}/match/{match_id}'
+                match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
                 description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command)
                 burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
 
-                burst_embed.set_author(name=f'{self.bot.translate("match")}{match_id}', url=match_url)
+                burst_embed.set_author(name=f'{self.bot.translate("match")}{match.id}', url=match_url)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
                 burst_embed.add_field(name=f'__{self.bot.translate("team")} {team_one[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team1_profiles[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
@@ -893,7 +891,7 @@ class MatchCog(commands.Cog):
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
             await self.ready_message[ctx.guild].edit(embed=burst_embed)
-            await self.setup_match_channels(ctx.guild, match_id, team_one, team_two)
+            await self.setup_match_channels(ctx.guild, match.id, team_one, team_two)
 
             return True  # Everyone readied up
 

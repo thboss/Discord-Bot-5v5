@@ -56,8 +56,8 @@ class QueueCog(commands.Cog):
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
-        channel_id = await self.bot.get_guild_data(member.guild, 'voice_lobby')
-        voice_lobby = member.guild.get_channel(channel_id)
+        vc_id = await self.bot.get_guild_data(member.guild, 'voice_lobby')
+        voice_lobby = member.guild.get_channel(vc_id)
         if before.channel == voice_lobby and after.channel == voice_lobby:
             return
 
@@ -98,13 +98,16 @@ class QueueCog(commands.Cog):
                         channel_id = await self.bot.get_guild_data(member.guild, 'text_queue')
                         text_channel = member.guild.get_channel(channel_id)
                         index_channel = member.guild.channels.index(text_channel)
-                        role_id = await self.bot.get_guild_data(member.guild, 'alerts_role')
-                        role = member.guild.get_role(role_id)
-                        await member.guild.channels[index_channel].send(f'{role.mention} +{capacity - len(queue_ids)}')
+                        alert_role_id = await self.bot.get_guild_data(member.guild, 'alerts_role')
+                        alert_role = member.guild.get_role(alert_role_id)
+                        await member.guild.channels[index_channel].send(f'{alert_role.mention} +{capacity - len(queue_ids)}')
 
                     # Check and burst queue if full
                     if len(queue_ids) == capacity:
                         self.block_lobby[member.guild] = True
+                        pug_role_id = await self.bot.get_guild_data(member.guild, 'pug_role')
+                        pug_role = member.guild.get_role(pug_role_id)
+                        await voice_lobby.set_permissions(pug_role, connect=False)
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
                         all_readied = await match_cog.start_match(member, queue_members)
 
@@ -112,6 +115,7 @@ class QueueCog(commands.Cog):
                             await self.bot.db_helper.delete_queued_users(member.guild.id, *queue_ids)
 
                         self.block_lobby[member.guild] = False
+                        await voice_lobby.set_permissions(pug_role, connect=True)
                         title = self.bot.translate('players-in-queue')
                         embed = await self.queue_embed(member.guild, title)
                         await self.update_last_msg(member, embed) 

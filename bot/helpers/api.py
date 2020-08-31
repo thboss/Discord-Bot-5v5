@@ -162,10 +162,6 @@ class MatchServer:
         self.id = json['match_id']
         self.ip = json['ip']
         self.port = json['port']
-
-    @property
-    def get_match_id(self):
-        return self.id
     
     @property
     def connect_url(self):
