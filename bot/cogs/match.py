@@ -891,7 +891,7 @@ class MatchCog(commands.Cog):
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
             await self.ready_message[ctx.guild].edit(embed=burst_embed)
-            await self.setup_match_channels(ctx.guild, match.id, team_one, team_two)
+            await self.setup_match_channels(ctx.guild, str(match.id), team_one, team_two)
 
             return True  # Everyone readied up
 
