@@ -856,7 +856,8 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
             await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
 
-            results_channel = discord.utils.get(ctx.guild.channels, name=self.bot.str_text_results)
+            results_id = await self.bot.get_guild_data(ctx.guild, 'text_results')
+            results_channel = ctx.guild.get_channel(results_id)
             webhook = await results_channel.webhooks()
 
             if not webhook:

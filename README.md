@@ -40,19 +40,6 @@
 
     ```py
     DISCORD_BOT_TOKEN= #Bot token from the Discord developer portal
-
-    # NOTE: Bot automatically create required channels/emojis/roles
-    # VERY IMPORTANT: Make sure all channels have a different name
-
-    DISCORD_LEAGUE_CATEGORY= # League category name, E.g. "league"
-    DISCORD_LEAGUE_PUG_ROLE= # League role name, E.g. "linked"
-    DISCORD_LEAGUE_ALERTS_ROLE= # League role name, E.g. "alerts"
-    DISCORD_LEAGUE_REMAINING_ALERTS=2 # send alerts when there are (n) remaining players to fill up the queue (blank to disable)
-    DISCORD_LEAGUE_TEXT_QUEUE= # League queue channel name, E.g. "queue"
-    DISCORD_LEAGUE_TEXT_COMMANDS= # League commands channel name, E.g. "commands"
-    DISCORD_LEAGUE_TEXT_RESULT= # League results channel name, E.g. "results"
-    DISCORD_LEAGUE_VOICE_LOBBY= # League lobby voice channel name, E.g. "Lobby"
-
     DISCORD_LEAGUE_LANGUAGE= # Bot language (key from translations.json), E.g. "en"
 
     CSGO_LEAGUE_API_KEY= # API from the CS:GO League web backend .env file
