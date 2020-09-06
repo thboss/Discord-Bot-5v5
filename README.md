@@ -16,16 +16,16 @@
 
     * Linux command is `sudo apt-get install libpq-dev`.
 
-3. Run `pip3 install -r requirements.txt` in the repository's root directory to get the necessary libraries.
+4. Run `pip3 install -r requirements.txt` in the repository's root directory to get the necessary libraries.
 
     * Note that python-Levenshtein requires your system to have a C++ compiler (Visual Studio C++ compiler for Windows or g++ for Linux). This library may be replaced in the future to eliminate this requirement.
 
-4. Install PostgreSQL 9.5 or higher.
+5. Install PostgreSQL 9.5 or higher.
 
     * Linux command is `sudo apt-get install postgresql`.
     * Windows users can download [here](https://www.postgresql.org/download/windows).
 
-5. Run the psql tool with `sudo -u postgres psql` and create a database by running the following commands:
+6. Run the psql tool with `sudo -u postgres psql` and create a database by running the following commands:
 
     ```sql
     CREATE ROLE csgoleague WITH LOGIN PASSWORD 'yourpassword';
@@ -36,7 +36,7 @@
 
     Quit psql with `\q`
 
-5. Create an environment file named `.env` with in the repository's root directory. Fill this template with the requisite information you've gathered...
+7. Create an environment file named `.env` with in the repository's root directory. Fill this template with the requisite information you've gathered...
 
     ```py
     DISCORD_BOT_TOKEN= #Bot token from the Discord developer portal
@@ -52,10 +52,17 @@
     ```
 
 
-6. Apply the database migrations by running `python3 migrate.py up`.
+8. Apply the database migrations by running `python3 migrate.py up`.
 
-7. Run the launcher Python script by running, `python3 launcher.py`.
+9. Run the launcher Python script by running, `python3 launcher.py`.
 
+#### NOTES
+1. Bot automatically create required channels and roles, It's possible to rename them.
+
+2. Want to add maps not in map pool?
+      * Empty the database by running `python3 migrate.py down`
+      * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`
+      * Apply the new database migrations by running `python3 migrate.py up`.
 
 ## Commands
 
