@@ -59,9 +59,9 @@
 #### NOTES
 1. Bot automatically create required channels and roles, It's possible to rename them.
 
-2. Want to add maps not in map pool?
-      * Empty the database by running `python3 migrate.py down`
-      * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`
+2. Want to add maps are not in map pool?
+      * Empty the database by running `python3 migrate.py down`.
+      * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
       * Apply the new database migrations by running `python3 migrate.py up`.
 
 ## Commands
