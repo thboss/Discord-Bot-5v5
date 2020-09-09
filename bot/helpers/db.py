@@ -28,8 +28,10 @@ class DBHelper:
         async with self.pool.acquire() as connection:
             async with connection.transaction():
                 row = await connection.fetchrow(statement, row_id)
-
-        return {col: val for col, val in row.items()}
+        try:
+            return {col: val for col, val in row.items()}
+        except AttributeError:
+            return {}
 
     async def _update_row(self, table, row_id, **data):
         """ Generic method to update table row by object id. """
@@ -49,9 +51,9 @@ class DBHelper:
 
         return {col: val for rec in updated_vals for col, val in rec.items()}
 
-    async def insert_guilds(self, *guild_ids):
+    async def insert_leagues(self, *league_ids):
         """ Add a list of guilds into the guilds table and return the ones successfully added. """
-        rows = [tuple([guild_id] + [None] * 11 + [None] * len(maps)) for guild_id in guild_ids]
+        rows = [tuple([league_id] + [None] * 11 + [None] * len(maps)) for league_id in league_ids]
         statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'
@@ -181,12 +183,12 @@ class DBHelper:
             async with connection.transaction():
                 deleted = await connection.fetch(statement, guild_id)
 
-        return self._get_record_attrs(deleted, 'user_id')    
+        return self._get_record_attrs(deleted, 'user_id')
 
-    async def get_guild(self, guild_id):
+    async def get_league(self, league_id):
         """ Get a guild's row from the guilds table. """
-        return await self._get_row('guilds', guild_id)
+        return await self._get_row('guilds', league_id)
 
-    async def update_guild(self, guild_id, **data):
+    async def update_league(self, league_id, **data):
         """ Update a guild's row in the guilds table. """
-        return await self._update_row('guilds', guild_id, **data)
+        return await self._update_row('guilds', league_id, **data)

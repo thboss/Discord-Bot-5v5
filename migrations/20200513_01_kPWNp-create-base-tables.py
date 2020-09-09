@@ -20,7 +20,6 @@ steps = [
             '    capacity SMALLINT DEFAULT 10,\n'
             '    team_method team_method DEFAULT \'captains\',\n'
             '    captain_method captain_method DEFAULT \'volunteer\',\n'
-            '    category BIGINT DEFAULT NULL,\n'
             '    pug_role BIGINT DEFAULT NULL,\n'
             '    alerts_role BIGINT DEFAULT NULL,\n'
             '    text_queue BIGINT DEFAULT NULL,\n'
