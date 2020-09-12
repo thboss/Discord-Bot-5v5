@@ -67,7 +67,7 @@ class DBHelper:
 
         return self._get_record_attrs(inserted, 'id')
 
-    async def delete_guilds(self, *guild_ids):
+    async def delete_leagues(self, *league_ids):
         """ Remove a list of guilds from the guilds table and return the ones successfully removed. """
         statement = (
             'DELETE FROM guilds\n'
@@ -77,7 +77,7 @@ class DBHelper:
 
         async with self.pool.acquire() as connection:
             async with connection.transaction():
-                deleted = await connection.fetch(statement, guild_ids)
+                deleted = await connection.fetch(statement, league_ids)
 
         return self._get_record_attrs(deleted, 'id')
 

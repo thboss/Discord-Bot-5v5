@@ -180,19 +180,16 @@ class QueueCog(commands.Cog):
             return
 
         if not await self.bot.api_helper.is_linked(ctx.author.id):
-            msg = self.bot.translate('discord-not-linked').format(ctx.author.mention)
-            embed = self.bot.embed_template(description=msg, color=self.bot.color)
-            await ctx.send(embed=embed)
-            return
+            msg = self.bot.translate('discord-not-linked')
+        else:
+            role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+            role = ctx.guild.get_role(role_id)
+            await ctx.author.add_roles(role)
+            await self.bot.api_helper.update_discord_name(ctx.author)
+            msg = self.bot.translate('discord-get-role')
 
-        role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
-        role = ctx.guild.get_role(role_id)
-        await ctx.author.add_roles(role)
-        await self.bot.api_helper.update_discord_name(ctx.author)
-
-        msg = self.bot.translate('discord-get-role').format(ctx.author.mention, role.mention)
         embed = self.bot.embed_template(description=msg, color=self.bot.color)
-        await ctx.send(embed=embed)
+        await ctx.send(content=ctx.author.mention, embed=embed)
 
     @commands.command(usage='alerts <on|off>',
                       brief='Send alerts about remaining to fill up the queue')
@@ -208,15 +205,15 @@ class QueueCog(commands.Cog):
 
             if args[0].lower() == 'on':
                 await ctx.author.add_roles(role)
-                msg = self.bot.translate('added-alerts').format(ctx.author.display_name)
+                msg = self.bot.translate('added-alerts')
             elif args[0].lower() == 'off':
                 await ctx.author.remove_roles(role)
-                msg = self.bot.translate('removed-alerts').format(ctx.author.display_name)
+                msg = self.bot.translate('removed-alerts')
             else:
                 msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
 
         embed = self.bot.embed_template(title=msg, color=self.bot.color)
-        await ctx.send(embed=embed)
+        await ctx.send(content=ctx.author.mention, embed=embed)
 
     @commands.command(usage='remove <member mention>',
                       brief='Remove the mentioned member from the queue (must have server kick perms)')
@@ -371,24 +368,36 @@ class QueueCog(commands.Cog):
             text_channel_results = await ctx.guild.create_text_channel(name=f'{args}_results', category=category)
             voice_channel_lobby = await ctx.guild.create_voice_channel(name=f'{args}_lobby', category=category,
                                                                        user_limit=10)
-            await self.bot.db_helper.update_league(category.id, pug_role=pug_role.id),
-            await self.bot.db_helper.update_league(category.id, alerts_role=alerts_role.id),
-            await self.bot.db_helper.update_league(category.id, text_queue=text_channel_queue.id),
-            await self.bot.db_helper.update_league(category.id, text_commands=text_channel_commands.id),
-            await self.bot.db_helper.update_league(category.id, text_results=text_channel_results.id),
-            await self.bot.db_helper.update_league(category.id, voice_lobby=voice_channel_lobby.id),
-            await text_channel_queue.set_permissions(everyone_role, send_messages=False),
-            await text_channel_results.set_permissions(everyone_role, send_messages=False),
-            await voice_channel_lobby.set_permissions(everyone_role, connect=False),
+            await self.bot.db_helper.update_league(category.id, pug_role=pug_role.id)
+            await self.bot.db_helper.update_league(category.id, alerts_role=alerts_role.id)
+            await self.bot.db_helper.update_league(category.id, text_queue=text_channel_queue.id)
+            await self.bot.db_helper.update_league(category.id, text_commands=text_channel_commands.id)
+            await self.bot.db_helper.update_league(category.id, text_results=text_channel_results.id)
+            await self.bot.db_helper.update_league(category.id, voice_lobby=voice_channel_lobby.id)
+            await text_channel_queue.set_permissions(everyone_role, send_messages=False)
+            await text_channel_results.set_permissions(everyone_role, send_messages=False)
+            await voice_channel_lobby.set_permissions(everyone_role, connect=False)
             await voice_channel_lobby.set_permissions(pug_role, connect=True)
             msg = f'Successfully created league: {args}'
 
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)
 
+    @commands.command(usage='delete',
+                      brief='Delete league (Must have admin perms)')
+    @commands.has_permissions(administrator=True)
+    async def delete(self, ctx):
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        await self.bot.db_helper.delete_leagues(ctx.channel.category_id)
+        for channel in ctx.channel.category.channels + [ctx.channel.category]:
+            await channel.delete()
+
     @lang.error
     @cap.error
     @create.error
+    @delete.error
     async def cap_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):
