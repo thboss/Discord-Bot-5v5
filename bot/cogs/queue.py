@@ -191,30 +191,6 @@ class QueueCog(commands.Cog):
         embed = self.bot.embed_template(description=msg, color=self.bot.color)
         await ctx.send(content=ctx.author.mention, embed=embed)
 
-    @commands.command(usage='alerts <on|off>',
-                      brief='Send alerts about remaining to fill up the queue')
-    async def alerts(self, ctx, *args):
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        if len(args) == 0:
-            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
-        else:
-            role_id = await self.bot.get_league_data(ctx.channel.category, 'alerts_role')
-            role = ctx.guild.get_role(role_id)
-
-            if args[0].lower() == 'on':
-                await ctx.author.add_roles(role)
-                msg = self.bot.translate('added-alerts')
-            elif args[0].lower() == 'off':
-                await ctx.author.remove_roles(role)
-                msg = self.bot.translate('removed-alerts')
-            else:
-                msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}alerts <on|off>`'
-
-        embed = self.bot.embed_template(title=msg, color=self.bot.color)
-        await ctx.send(content=ctx.author.mention, embed=embed)
-
     @commands.command(usage='remove <member mention>',
                       brief='Remove the mentioned member from the queue (must have server kick perms)')
     @commands.has_permissions(kick_members=True)
@@ -362,14 +338,12 @@ class QueueCog(commands.Cog):
             await self.bot.db_helper.insert_leagues(category.id)
             everyone_role = get(ctx.guild.roles, name='@everyone')
             pug_role = await ctx.guild.create_role(name=f'{args}_linked')
-            alerts_role = await ctx.guild.create_role(name=f'{args}_alerts')
             text_channel_queue = await ctx.guild.create_text_channel(name=f'{args}_queue', category=category)
             text_channel_commands = await ctx.guild.create_text_channel(name=f'{args}_commands', category=category)
             text_channel_results = await ctx.guild.create_text_channel(name=f'{args}_results', category=category)
             voice_channel_lobby = await ctx.guild.create_voice_channel(name=f'{args}_lobby', category=category,
                                                                        user_limit=10)
             await self.bot.db_helper.update_league(category.id, pug_role=pug_role.id)
-            await self.bot.db_helper.update_league(category.id, alerts_role=alerts_role.id)
             await self.bot.db_helper.update_league(category.id, text_queue=text_channel_queue.id)
             await self.bot.db_helper.update_league(category.id, text_commands=text_channel_commands.id)
             await self.bot.db_helper.update_league(category.id, text_results=text_channel_results.id)
@@ -389,6 +363,13 @@ class QueueCog(commands.Cog):
     async def delete(self, ctx):
         if not await self.bot.isValidChannel(ctx):
             return
+
+        pug_role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+        pug_role = ctx.guild.get_role(pug_role_id)
+        try:
+            await pug_role.delete()
+        except NotFound:
+            pass
 
         await self.bot.db_helper.delete_leagues(ctx.channel.category_id)
         for channel in ctx.channel.category.channels + [ctx.channel.category]:

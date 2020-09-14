@@ -38,14 +38,6 @@ class LeagueBot(commands.AutoShardedBot):
         self.discord_token = discord_token
         self.api_base_url = api_base_url
         self.api_key = api_key
-        try:
-            self.int_remaining_alerts = int(os.environ['DISCORD_LEAGUE_REMAINING_ALERTS'])
-        except (KeyError, ValueError):
-            self.int_remaining_alerts = 0
-        try:
-            self.language = os.environ['DISCORD_LEAGUE_LANGUAGE']
-        except (KeyError, ValueError):
-            self.language = 'en'
         self.db_pool = db_pool
         self.all_maps = []
 
@@ -85,7 +77,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     def translate(self, text):
         try:
-            return self.translations[self.language][text]
+            return self.translations[os.environ['DISCORD_LEAGUE_LANGUAGE']][text]
         except (KeyError, ValueError):
             return self.translations['en'][text]
 

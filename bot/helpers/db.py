@@ -52,11 +52,11 @@ class DBHelper:
         return {col: val for rec in updated_vals for col, val in rec.items()}
 
     async def insert_leagues(self, *league_ids):
-        """ Add a list of guilds into the guilds table and return the ones successfully added. """
-        rows = [tuple([league_id] + [None] * 11 + [None] * len(maps)) for league_id in league_ids]
+        """ Add a list of leagues into the leagues table and return the ones successfully added. """
+        rows = [tuple([league_id] + [None] * 9 + [None] * len(maps)) for league_id in league_ids]
         statement = (
-            'INSERT INTO guilds (id)\n'
-            '    (SELECT id FROM unnest($1::guilds[]))\n'
+            'INSERT INTO leagues (id)\n'
+            '    (SELECT id FROM unnest($1::leagues[]))\n'
             '    ON CONFLICT (id) DO NOTHING\n'
             '    RETURNING id;'
         )
@@ -68,9 +68,9 @@ class DBHelper:
         return self._get_record_attrs(inserted, 'id')
 
     async def delete_leagues(self, *league_ids):
-        """ Remove a list of guilds from the guilds table and return the ones successfully removed. """
+        """ Remove a list of leagues from the leagues table and return the ones successfully removed. """
         statement = (
-            'DELETE FROM guilds\n'
+            'DELETE FROM leagues\n'
             '    WHERE id::BIGINT = ANY($1::BIGINT[])\n'
             '    RETURNING id;'
         )
@@ -83,7 +83,7 @@ class DBHelper:
 
     async def sync_guilds(self, *guild_ids):
         """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [tuple([guild_id] + [None] * 11 + [None] * len(maps)) for guild_id in guild_ids]
+        insert_rows = [tuple([guild_id] + [None] * 9 + [None] * len(maps)) for guild_id in guild_ids]
         insert_statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'
@@ -186,9 +186,9 @@ class DBHelper:
         return self._get_record_attrs(deleted, 'user_id')
 
     async def get_league(self, league_id):
-        """ Get a guild's row from the guilds table. """
-        return await self._get_row('guilds', league_id)
+        """ Get a guild's row from the leagues table. """
+        return await self._get_row('leagues', league_id)
 
     async def update_league(self, league_id, **data):
-        """ Update a guild's row in the guilds table. """
-        return await self._update_row('guilds', league_id, **data)
+        """ Update a guild's row in the leagues table. """
+        return await self._update_row('leagues', league_id, **data)
