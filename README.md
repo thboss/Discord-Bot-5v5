@@ -56,17 +56,42 @@
 
 9. Run the launcher Python script by running, `python3 launcher.py`.
 
-#### NOTES
-1. Bot automatically create required channels and roles, It's possible to rename them.
 
-2. Want to add maps are not in map pool?
+## How to play
+
+1. Type q!create <League name> to create new League and the bot automatically will create these channels:
+    * name_queue :    view queue progress.
+    * name_commands : bot commands are restrict in this channel.
+    * name_results :  view matches results.
+    * name_lobby :    players must join this channel to add to the queue
+
+2. Type q!link in the commands channel and you will get DM has a link.
+
+3. Open that link and log in with Steam to connect your account to League system.
+
+4. Once linked, type q!check  in the commands channel to get the verified role.
+
+5. Join Lobby voice channel and wait fills up the queue.
+
+6. Bot automatically create teams channels and move players into.
+
+7. Once match over, Bot remove teams channels.
+
+#### NOTES
+1. Want to add maps are not in map pool?
       * Empty the database by running `python3 migrate.py down`.
       * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
       * Apply the new database migrations by running `python3 migrate.py up`.
 
+2. You can rename channels.
+
 ## Commands
 
 ### Admin commands
+
+`q!create <League name>` **-** Create new league <br>
+
+`q!delete` **-** Delete the league <br>
 
 `q!remove <mention>` **-** Remove the mentioned user from the queue <br>
 
