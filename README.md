@@ -59,17 +59,17 @@
 
 ## How to play
 
-1. Type q!create <League name> to create new League and the bot automatically will create these channels:
+1. Type `q!create <League name>` to create new League and the bot automatically will create these channels:
     * name_queue :    view queue progress.
     * name_commands : bot commands are restrict in this channel.
     * name_results :  view matches results.
     * name_lobby :    players must join this channel to add to the queue
 
-2. Type q!link in the commands channel and you will get DM has a link.
+2. Type `q!link` in the commands channel and you will get DM has a link.
 
 3. Open that link and log in with Steam to connect your account to League system.
 
-4. Once linked, type q!check  in the commands channel to get the verified role.
+4. Once linked, type `q!check`  in the commands channel to get the verified role.
 
 5. Join Lobby voice channel and wait fills up the queue.
 
