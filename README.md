@@ -116,8 +116,6 @@
 
 `q!unlink` **-**  Unlink a player on the backend <br>
 
-`q!alerts <on|off>` **-** Enable/Disable alerts about remaining players to fill up the queue <br>
-
 `q!stats` **-** See your stats <br>
 
 `q!leaders` **-** See the top players in the server <br>
