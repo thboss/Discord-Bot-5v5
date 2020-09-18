@@ -254,7 +254,7 @@ class QueueCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=self.bot.translate('remove-perm').format(missing_perm))
+            embed = self.bot.embed_template(title=self.bot.translate('required-perm').format(missing_perm))
             await ctx.send(embed=embed)
 
     @commands.command(usage='cap [new capacity]',
@@ -298,33 +298,6 @@ class QueueCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(usage='lang <language key>',
-                      brief='Set or display bot language (Must have admin perms)')
-    @commands.has_permissions(administrator=True)
-    async def lang(self, ctx, arg=None):
-        """ Set or display bot language. """
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        language = await self.bot.get_league_data(ctx.channel.category, 'language')
-        valid_languages = self.bot.translations.keys()
-
-        if arg is None:
-            title = self.bot.translate('current-language').format(language)
-        else:
-            arg = arg.lower()
-
-            if arg == language:
-                title = self.bot.translate('language-already').format(language)
-            elif arg in valid_languages:
-                title = self.bot.translate('set-language').format(language)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, language=arg)
-            else:
-                title = self.bot.translate('valid-languages') + ', '.join(lang for lang in valid_languages)
-
-        embed = self.bot.embed_template(title=title)
-        await ctx.send(embed=embed)
-
     @commands.command(usage='create <league name>',
                       brief='Create league (Must have admin perms)')
     @commands.has_permissions(administrator=True)
@@ -332,7 +305,7 @@ class QueueCog(commands.Cog):
         args = ' '.join(arg for arg in args)
 
         if not len(args):
-            msg = f'Invalid usage: q!create <league name>'
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}create <League name>`'
         else:
             category = await ctx.guild.create_category_channel(name=args)
             await self.bot.db_helper.insert_leagues(category.id)
@@ -352,7 +325,7 @@ class QueueCog(commands.Cog):
             await text_channel_results.set_permissions(everyone_role, send_messages=False)
             await voice_channel_lobby.set_permissions(everyone_role, connect=False)
             await voice_channel_lobby.set_permissions(pug_role, connect=True)
-            msg = f'Successfully created league: {args}'
+            msg = self.bot.translate('create-league').format(args)
 
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)
@@ -375,7 +348,6 @@ class QueueCog(commands.Cog):
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()
 
-    @lang.error
     @cap.error
     @create.error
     @delete.error
@@ -384,5 +356,5 @@ class QueueCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=self.bot.translate('change-capacity-perm').format(missing_perm))
+            embed = self.bot.embed_template(title=self.bot.translate('required-perm').format(missing_perm))
             await ctx.send(embed=embed)
