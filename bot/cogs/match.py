@@ -794,7 +794,7 @@ class MatchCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def teams(self, ctx, method=None):
         """ Set or display the method by which teams are created. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         team_method = await self.bot.get_league_data(ctx.channel.category, 'team_method')
@@ -822,7 +822,7 @@ class MatchCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def captains(self, ctx, method=None):
         """ Set or display the method by which captains are selected. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         guild_data = await self.bot.db_helper.get_league(ctx.channel.category_id)
@@ -851,7 +851,7 @@ class MatchCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def maps(self, ctx, method=None):
         """ Set or display the method by which the teams are created. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         map_method = await self.bot.get_league_data(ctx.channel.category, 'map_method')
@@ -879,7 +879,7 @@ class MatchCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def mpool(self, ctx, *args):
         """ Edit the guild's map pool for map drafts. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         map_pool = [m.dev_name for m in self.bot.all_maps if await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
@@ -934,7 +934,7 @@ class MatchCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def end(self, ctx, *args):
         """ Force end a match. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         if len(args) == 0:

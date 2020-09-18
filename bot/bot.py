@@ -93,9 +93,9 @@ class LeagueBot(commands.AutoShardedBot):
         except KeyError:
             return None
 
-    async def isValidChannel(self, ctx):
+    async def isValidChannel(self, channel):
         try:
-            channel_id = await self.get_league_data(ctx.channel.category, 'text_commands')
+            channel_id = await self.get_league_data(channel.category, 'text_commands')
         except AttributeError:
             channel_id = None
         commands_channel = self.get_channel(channel_id)

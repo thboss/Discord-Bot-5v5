@@ -13,7 +13,7 @@ class AuthCog(commands.Cog):
     @commands.command(brief='Link a player on the backend')
     async def link(self, ctx):
         """ Link a player by sending them a link to sign in with steam on the backend. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
@@ -40,7 +40,7 @@ class AuthCog(commands.Cog):
     @commands.command(brief='UnLink a player on the backend')
     async def unlink(self, ctx):
         """ Unlink a player by delete him on the backend. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
@@ -55,4 +55,22 @@ class AuthCog(commands.Cog):
             await ctx.author.remove_roles(role)
 
         embed = self.bot.embed_template(title=title)
+        await ctx.send(content=ctx.author.mention, embed=embed)
+
+    @commands.command(brief='Check if account is linked and give linked role')
+    async def check(self, ctx):
+        """"""
+        if not await self.bot.isValidChannel(ctx.channel):
+            return
+
+        if not await self.bot.api_helper.is_linked(ctx.author.id):
+            msg = self.bot.translate('discord-not-linked')
+        else:
+            role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+            role = ctx.guild.get_role(role_id)
+            await ctx.author.add_roles(role)
+            await self.bot.api_helper.update_discord_name(ctx.author)
+            msg = self.bot.translate('discord-get-role')
+
+        embed = self.bot.embed_template(description=msg, color=self.bot.color)
         await ctx.send(content=ctx.author.mention, embed=embed)

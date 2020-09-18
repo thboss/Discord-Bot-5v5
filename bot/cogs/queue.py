@@ -174,29 +174,12 @@ class QueueCog(commands.Cog):
             # Update queue display message
             await self._update_last_msg(before_lobby.category, embed)
 
-    @commands.command(brief='Check if account is linked and give linked role')
-    async def check(self, ctx):
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        if not await self.bot.api_helper.is_linked(ctx.author.id):
-            msg = self.bot.translate('discord-not-linked')
-        else:
-            role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
-            role = ctx.guild.get_role(role_id)
-            await ctx.author.add_roles(role)
-            await self.bot.api_helper.update_discord_name(ctx.author)
-            msg = self.bot.translate('discord-get-role')
-
-        embed = self.bot.embed_template(description=msg, color=self.bot.color)
-        await ctx.send(content=ctx.author.mention, embed=embed)
-
     @commands.command(usage='remove <member mention>',
                       brief='Remove the mentioned member from the queue (must have server kick perms)')
     @commands.has_permissions(kick_members=True)
     async def remove(self, ctx):
         """ Remove the specified member from the queue. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         try:
@@ -228,7 +211,7 @@ class QueueCog(commands.Cog):
     @commands.has_permissions(kick_members=True)
     async def empty(self, ctx):
         """ Reset the guild queue list to empty. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
         self.block_lobby[ctx.channel.category] = True
         await self.bot.db_helper.delete_all_queued_users(ctx.channel.category.id)
@@ -262,7 +245,7 @@ class QueueCog(commands.Cog):
     @commands.has_permissions(administrator=True)
     async def cap(self, ctx, *args):
         """ Set the queue capacity. """
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         capacity = await self.bot.get_league_data(ctx.channel.category, 'capacity')
@@ -334,7 +317,7 @@ class QueueCog(commands.Cog):
                       brief='Delete league (Must have admin perms)')
     @commands.has_permissions(administrator=True)
     async def delete(self, ctx):
-        if not await self.bot.isValidChannel(ctx):
+        if not await self.bot.isValidChannel(ctx.channel):
             return
 
         pug_role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
