@@ -17,8 +17,6 @@
         "mention-to-remove":    "Mention a player in the command to remove them",
         "removed-not-in-queue": "**{}**is not in the queue",
         "queue-emptied":        "The queue has been emptied",
-        "current-capacity":     "The current queue capacity is **{}**",
-        "capacity-not-integer": "{} is not an integer",
         "capacity-already":     "Capacity is already set to **{}**",
         "capacity-out-range":   "Capacity is outside of valid range (2-100)",
         "set-capacity":         "Queue capacity set to **{}**",

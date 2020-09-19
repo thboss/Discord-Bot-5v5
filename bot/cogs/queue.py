@@ -267,36 +267,33 @@ class QueueCog(commands.Cog):
 
         capacity = await self.bot.get_league_data(ctx.channel.category, 'capacity')
 
-        if len(args) == 0:  # No size argument specified
-            embed = self.bot.embed_template(title=self.bot.translate('current-capacity').format(capacity))
+        try:
+            new_cap = int(args[0])
+        except (IndexError, ValueError):
+            msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}cap <number>`'
         else:
-            new_cap = args[0]
-
-            try:
-                new_cap = int(new_cap)
-            except ValueError:
-                embed = self.bot.embed_template(title=self.bot.translate('capacity-not-integer').format(new_cap))
+            if new_cap == capacity:
+                msg = self.bot.translate('capacity-already').format(capacity)
+            elif new_cap < 2 or new_cap > 100:
+                msg = self.bot.translate('capacity-out-range')
             else:
-                if new_cap == capacity:
-                    embed = self.bot.embed_template(title=self.bot.translate('capacity-already').format(capacity))
-                elif new_cap < 2 or new_cap > 100:
-                    embed = self.bot.embed_template(title=self.bot.translate('capacity-out-range'))
-                else:
-                    self.block_lobby[ctx.channel.category] = True
-                    await self.bot.db_helper.delete_all_queued_users(ctx.channel.category_id)
-                    await self.bot.db_helper.update_league(ctx.channel.category_id, capacity=new_cap)
-                    embed = self.bot.embed_template(title=self.bot.translate('set-capacity').format(new_cap))
-                    embed.set_footer(text=self.bot.translate('queue-emptied-footer'))
+                self.block_lobby[ctx.channel.category] = True
+                await self.bot.db_helper.delete_all_queued_users(ctx.channel.category_id)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, capacity=new_cap)
+                embed = await self.queue_embed(ctx.channel.category, self.bot.translate('queue-emptied'))
+                embed.set_footer(text=self.bot.translate('queue-emptied-footer'))
+                await self.update_last_msg(ctx.channel.category, embed)
+                msg = self.bot.translate('set-capacity').format(new_cap)
 
-                    channel_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
-                    voice_lobby = ctx.bot.get_channel(channel_id)
-                    for player in voice_lobby.members:
-                        await player.move_to(None)
+                channel_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
+                voice_lobby = ctx.bot.get_channel(channel_id)
+                for player in voice_lobby.members:
+                    await player.move_to(None)
 
-                    self.block_lobby[ctx.channel.category] = False
-                    await voice_lobby.edit(user_limit=new_cap)
+                self.block_lobby[ctx.channel.category] = False
+                await voice_lobby.edit(user_limit=new_cap)
 
-        await ctx.send(embed=embed)
+        await ctx.send(embed=self.bot.embed_template(title=msg))
 
     @commands.command(usage='create <league name>',
                       brief='Create league (Must have admin perms)')
