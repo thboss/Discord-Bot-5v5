@@ -210,6 +210,14 @@ class ApiHelper:
             else:
                 return False
 
+    async def is_match_live(self, match_id):
+        """"""
+        url = f'{self.base_url}/match/status/{match_id}'
+
+        async with self.session.get(url=url, headers=self.headers) as resp:
+            resp_json = await resp.json()
+            return resp_json['live']
+
     async def update_discord_name(self, member):
         """ Update a members API name to their current Discord display name. """
         url = f'{self.base_url}/discord/update/{member.id}'
@@ -248,14 +256,13 @@ class ApiHelper:
             resp_json = await resp.json()
             return resp_json['success']
 
-    async def start_match(self, team_one, team_two, map_name, webhook):
+    async def start_match(self, team_one, team_two, map_name):
         """ Get a match server from the API. """
         url = f'{self.base_url}/match/start'
         data = {
             'team_one': {member.id: member.display_name for member in team_one},
             'team_two': {member.id: member.display_name for member in team_two},
-            'maps': map_name,
-            'webhook': webhook
+            'maps': map_name
         }
 
         async with self.session.post(url=url, headers=self.headers, json=data) as resp:

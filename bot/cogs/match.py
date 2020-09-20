@@ -11,6 +11,11 @@ from random import shuffle, choice
 from re import findall
 from traceback import print_exception
 import sys
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+
+scheduler = AsyncIOScheduler()
+scheduler.start()
 
 
 class MatchCog(commands.Cog):
@@ -137,51 +142,13 @@ class MatchCog(commands.Cog):
 
         role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
 
-        vc_ended_match = await voice_lobby.guild.create_voice_channel(name=self.bot.translate('match-over'),
-                                                                      category=ended_match[0],
-                                                                      user_limit=len(match_players))
-        await vc_ended_match.set_permissions(role, connect=False, read_messages=True)
-
         for player in match_players:
             await voice_lobby.set_permissions(player, overwrite=None)
 
-        for player in match_players:
-            try:
-                await player.move_to(vc_ended_match)
-            except (AttributeError, discord.errors.HTTPException):
-                pass
+        for channel in reversed(ended_match[:3]):
+            await channel.delete()
 
-        await ended_match[1].delete()
-        await ended_match[2].delete()
-        await asyncio.sleep(60)
-        await vc_ended_match.delete()
-        await ended_match[0].delete()
         self.match_dict[category].pop(matchid)
-
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        """ Listen to message in results channel and get ended match from webhooks message. """
-        if len(message.embeds) < 1:
-            return
-        try:
-            results_channel_id = await self.bot.get_league_data(message.channel.category, 'text_results')
-        except AttributeError:
-            return
-
-        if message.channel.id != results_channel_id:
-            return
-
-        panel_url = f'{self.bot.api_helper.base_url}/match/'
-        if panel_url not in message.embeds[0].description:
-            return
-
-        match_id = findall('match/(\d+)', message.embeds[0].description)[0]
-
-        try:
-            if match_id in self.match_dict[message.channel.category]:
-                await self.delete_match_channels(message.channel.category, match_id)
-        except KeyError:
-            return
 
     def _ready_embed(self, category):
         str_value = ''
@@ -301,16 +268,9 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
             await self.ready_message[category].edit(content='', embed=burst_embed)
 
-            results_id = await self.bot.get_league_data(category, 'text_results')
-            results_channel = category.guild.get_channel(results_id)
-            webhook = await results_channel.webhooks()
-
-            if not webhook:
-                webhook.append(await results_channel.create_webhook(name='League Results'))
-
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.dev_name, webhook[0].url)
+                match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.dev_name)
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
@@ -337,6 +297,14 @@ class MatchCog(commands.Cog):
 
             await self.ready_message[category].edit(embed=burst_embed)
             await self.create_match_channels(category, str(match.id), team_one, team_two)
+
+            async def check_live():
+                live = await self.bot.api_helper.is_match_live(str(match.id))
+                if not live:
+                    await self.delete_match_channels(category, str(match.id))
+                    scheduler.remove_job(str(match.id))
+
+            scheduler.add_job(check_live, 'interval', seconds=10, id=str(match.id))
 
             return True  # Everyone readied up
 

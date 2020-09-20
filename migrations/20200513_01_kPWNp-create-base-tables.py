@@ -23,7 +23,6 @@ steps = [
             '    pug_role BIGINT DEFAULT NULL,\n'
             '    text_queue BIGINT DEFAULT NULL,\n'
             '    text_commands BIGINT DEFAULT NULL,\n'
-            '    text_results BIGINT DEFAULT NULL,\n'
             '    voice_lobby BIGINT DEFAULT NULL\n'            
             ');'
         ),
