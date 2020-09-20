@@ -53,7 +53,7 @@ class DBHelper:
 
     async def insert_leagues(self, *league_ids):
         """ Add a list of leagues into the leagues table and return the ones successfully added. """
-        rows = [tuple([league_id] + [None] * 8 + [None] * len(maps)) for league_id in league_ids]
+        rows = [tuple([league_id] + [None] * 9 + [None] * len(maps)) for league_id in league_ids]
         statement = (
             'INSERT INTO leagues (id)\n'
             '    (SELECT id FROM unnest($1::leagues[]))\n'
@@ -83,7 +83,7 @@ class DBHelper:
 
     async def sync_guilds(self, *guild_ids):
         """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [tuple([guild_id] + [None] * 8 + [None] * len(maps)) for guild_id in guild_ids]
+        insert_rows = [tuple([guild_id] + [None] * 9 + [None] * len(maps)) for guild_id in guild_ids]
         insert_statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'

@@ -97,55 +97,56 @@ class MatchCog(commands.Cog):
         match_category = await category.guild.create_category_channel(f'{self.bot.translate("match")}{match_id}')
         role = discord.utils.get(category.guild.roles, name='@everyone')
 
-        voice_channel_one = await category.guild.create_voice_channel(
+        channel_team_one = await category.guild.create_voice_channel(
             name=f'{self.bot.translate("team")} {team_one[0].display_name}',
             category=match_category,
             user_limit=len(team_one))
-        await voice_channel_one.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_one.set_permissions(role, connect=False, read_messages=True)
 
-        voice_channel_two = await category.guild.create_voice_channel(
+        channel_team_two = await category.guild.create_voice_channel(
             name=f'{self.bot.translate("team")} {team_two[0].display_name}',
             category=match_category,
             user_limit=len(team_two))
-        await voice_channel_two.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_two.set_permissions(role, connect=False, read_messages=True)
 
         if category not in self.match_dict:
             self.match_dict[category] = {}
 
-        self.match_dict[category][match_id] = [match_category, voice_channel_one, voice_channel_two, team_one, team_two]
+        self.match_dict[category][match_id] = [match_category, channel_team_one, channel_team_two, team_one, team_two]
 
         lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(lobby_id)
+        lobby = self.bot.get_channel(lobby_id)
 
-        for t1_player in range(len(team_one)):
-            await voice_channel_one.set_permissions(team_one[t1_player], connect=True)
-            await voice_lobby.set_permissions(team_one[t1_player], connect=False)
+        for p1, p2 in zip(team_one, team_two):
+            await channel_team_one.set_permissions(p1, connect=True)
+            await lobby.set_permissions(p1, connect=False)
+            await channel_team_two.set_permissions(p2, connect=True)
+            await lobby.set_permissions(p2, connect=False)            
             try:
-                await team_one[t1_player].move_to(voice_channel_one)
+                await p1.move_to(channel_team_one)
             except (AttributeError, discord.errors.HTTPException):
-                pass
-
-        for t2_player in range(len(team_two)):
-            await voice_channel_two.set_permissions(team_two[t2_player], connect=True)
-            await voice_lobby.set_permissions(team_two[t2_player], connect=False)
+                pass 
             try:
-                await team_two[t2_player].move_to(voice_channel_two)
+                await p2.move_to(channel_team_two)
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
     async def delete_match_channels(self, category, matchid):
         """ Move players to another channels and remove voice channels on match end. """
         lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(lobby_id)
-        ended_match = self.match_dict[category][matchid]
-        match_players = ended_match[3] + ended_match[4]
-
-        role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
+        lobby = self.bot.get_channel(lobby_id)
+        prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+        prelobby = self.bot.get_channel(prelobby_id)
+        match_players = self.match_dict[category][matchid][3] + self.match_dict[category][matchid][4]
 
         for player in match_players:
-            await voice_lobby.set_permissions(player, overwrite=None)
+            await lobby.set_permissions(player, overwrite=None)
+            try:
+                await player.move_to(prelobby)
+            except (AttributeError, discord.errors.HTTPException):
+                pass
 
-        for channel in reversed(ended_match[:3]):
+        for channel in reversed(self.match_dict[category][matchid][:3]):
             await channel.delete()
 
         self.match_dict[category].pop(matchid)
@@ -218,13 +219,15 @@ class MatchCog(commands.Cog):
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
+            prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+            prelobby = category.guild.get_channel(prelobby_id)
             title = self.bot.translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
             # disconnect unreadied players from the lobby voice channel
             for player in unreadied:
                 try:
-                    await player.move_to(None)
+                    await player.move_to(prelobby)
                 except (AttributeError, discord.errors.HTTPException):
                     pass
 
