@@ -4,570 +4,18 @@ import aiohttp
 import asyncio
 import discord
 from discord.ext import commands
-from discord.errors import NotFound
-import random
-import json
-import re
+
+from . import menus
+
+from random import shuffle, choice
+from re import findall
+from traceback import print_exception
 import sys
-import traceback
-from collections import defaultdict
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
-# import pyrankvote
-# from pyrankvote import Candidate, Ballot
 
-
-emoji_numbers = [u'\u0030\u20E3',
-                 u'\u0031\u20E3',
-                 u'\u0032\u20E3',
-                 u'\u0033\u20E3',
-                 u'\u0034\u20E3',
-                 u'\u0035\u20E3',
-                 u'\u0036\u20E3',
-                 u'\u0037\u20E3',
-                 u'\u0038\u20E3',
-                 u'\u0039\u20E3',
-                 u'\U0001F51F']
-
-
-class PickError(ValueError):
-    """ Raised when a team draft pick is invalid for some reason. """
-
-    def __init__(self, message):
-        """ Set message parameter. """
-        self.message = message
-
-
-class TeamDraftMenu(discord.Message):
-    """ Message containing the components for a team draft. """
-
-    def __init__(self, message, bot, members):
-        """ Copy constructor from a message and specific team draft args. """
-        # Copy all attributes from message object
-        for attr_name in message.__slots__:
-            try:
-                attr_val = getattr(message, attr_name)
-            except AttributeError:
-                continue
-
-            setattr(self, attr_name, attr_val)
-
-        # Add custom attributes
-        self.bot = bot
-        self.members = members
-        self.pick_emojis = dict(zip(emoji_numbers[1:], members))
-        self.pick_order = '12211221'
-        self.pick_number = None
-        self.members_left = None
-        self.teams = None
-        self.future = None
-
-    @property
-    def _active_picker(self):
-        """ Get the active picker using the pick order and nummber. """
-        if self.pick_number is None:
-            return None
-
-        picking_team_number = int(self.pick_order[self.pick_number])
-        picking_team = self.teams[picking_team_number - 1]  # Subtract 1 to get team's index
-
-        if len(picking_team) == 0:
-            return None
-
-        return picking_team[0]
-
-    def _picker_embed(self, title):
-        """ Generate the menu embed based on the current status of the team draft. """
-        embed = self.bot.embed_template(title=title)
-        embed.set_footer(text=self.bot.translate('team-pick-footer'))
-
-        for team in self.teams:
-            team_name = f'__{self.bot.translate("team")}__' if len(
-                team) == 0 else f'__{self.bot.translate("team")} {team[0].display_name}__'
-
-            if len(team) == 0:
-                team_players = f'_{self.bot.translate("empty")}_'
-            else:
-                team_players = '\n'.join(p.display_name for p in team)
-
-            embed.add_field(name=team_name, value=team_players)
-
-        members_left_str = ''
-
-        for emoji, member in self.pick_emojis.items():
-            if not any(member in team for team in self.teams):
-                members_left_str += f'{emoji}  {member.display_name}\n'
-            else:
-                members_left_str += f':heavy_multiplication_x:  ~~{member.display_name}~~\n'
-
-        embed.insert_field_at(1, name=f'__{self.bot.translate("players-left")}__', value=members_left_str)
-
-        status_str = ''
-
-        status_str += f'**{self.bot.translate("capt1")}:** {self.teams[0][0].mention}\n' if len(
-            self.teams[0]) else f'**{self.bot.translate("capt1")}:**\n '
-        status_str += f'**{self.bot.translate("capt2")}:** {self.teams[1][0].mention}\n\n' if len(
-            self.teams[1]) else f'**{self.bot.translate("capt2")}:**\n\n '
-        status_str += f'**{self.bot.translate("current-capt")}:** {self._active_picker.mention}' \
-            if self._active_picker is not None else f'**{self.bot.translate("current-capt")}:**'
-
-        embed.add_field(name=f'__{self.bot.translate("info")}__', value=status_str)
-        return embed
-
-    def _pick_player(self, picker, pickee):
-        """ Process a team captain's player pick, assuming the picker is in the team draft. """
-        # Get picking team
-        if picker == pickee:
-            raise PickError(self.bot.translate('picker-pick-self').format(picker.display_name))
-        elif not self.teams[0]:
-            picking_team = self.teams[0]
-            self.members_left.remove(picker)
-            picking_team.append(picker)
-        elif self.teams[1] == [] and picker == self.teams[0][0]:
-            raise PickError(self.bot.translate('picker-not-turn').format(picker.display_name))
-        elif self.teams[1] == [] and picker in self.teams[0]:
-            raise PickError(self.bot.translate('picker-not-captain').format(picker.display_name))
-        elif not self.teams[1]:
-            picking_team = self.teams[1]
-            self.members_left.remove(picker)
-            picking_team.append(picker)
-        elif picker == self.teams[0][0]:
-            picking_team = self.teams[0]
-        elif picker == self.teams[1][0]:
-            picking_team = self.teams[1]
-        else:
-            raise PickError(self.bot.translate('picker-not-captain').format(picker.display_name))
-
-        # Check if it's picker's turn
-        if picker != self._active_picker:
-            raise PickError(self.bot.translate('picker-not-turn').format(picker.display_name))
-
-        # Prevent picks when team is full
-        if len(picking_team) > len(self.members) // 2:
-            raise PickError(self.bot.translate('team-full').format(picker.display_name))
-
-        self.members_left.remove(pickee)
-        picking_team.append(pickee)
-        self.pick_number += 1
-
-    async def _update_menu(self, title):
-        """ Update the message to reflect the current status of the team draft. """
-        await self.edit(embed=self._picker_embed(title))
-        items = self.pick_emojis.items()
-        awaitables = [self.clear_reaction(emoji) for emoji, member in items if member not in self.members_left]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
-
-    async def _process_pick(self, reaction, member):
-        """ Handler function for player pick reactions. """
-        # Check that reaction is on this message and member is in the team draft
-        if reaction.message.id != self.id or member not in self.members:
-            return
-
-        # Check that picked player is in the player pool
-        pick = self.pick_emojis.get(str(reaction.emoji), None)
-
-        if pick is None or pick not in self.members_left:
-            return
-
-        # Attempt to pick the player for the team
-        try:
-            self._pick_player(member, pick)
-        except PickError as e:  # Player not picked
-            title = e.message
-        else:  # Player picked 
-            title = self.bot.translate('team-picked').format(member.display_name, pick.display_name)
-
-        if len(self.members_left) == 1:
-            fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
-            fat_kid_team.append(self.members_left.pop(0))
-            await self._update_menu(title)
-
-            if self.future is not None:
-                self.future.set_result(None)
-            return
-
-        if len(self.members_left) == 0:
-            await self._update_menu(title)
-            if self.future is not None:
-                self.future.set_result(None)
-            return
-
-        await self._update_menu(title)
-
-    async def draft(self):
-        """ Start the team draft and return the teams after it's finished. """
-        # Initialize draft
-        self.members_left = self.members.copy()  # Copy members to edit players remaining in the player pool
-        self.teams = [[], []]
-        self.pick_number = 0
-        captain_method = await self.bot.get_guild_data(self.guild, 'captain_method')
-
-        if captain_method == 'rank':
-            players = await self.bot.api_helper.get_players([member.id for member in self.members_left])
-            players.sort(reverse=True, key=lambda x: x.score)
-
-            for team in self.teams:
-                captain = self.bot.get_guild(self.guild.id).get_member(players.pop(0).discord)
-                self.members_left.remove(captain)
-                team.append(captain)
-        elif captain_method == 'random':
-            temp_members = self.members_left.copy()
-            random.shuffle(temp_members)
-
-            for team in self.teams:
-                captain = temp_members.pop()
-                self.members_left.remove(captain)
-                team.append(captain)
-        elif captain_method == 'volunteer':
-            pass
-        else:
-            raise ValueError(f'Captain method "{captain_method}" isn\'t valid')
-
-        await self.edit(embed=self._picker_embed(self.bot.translate('team-draft-begun')))
-
-        items = self.pick_emojis.items()
-        for emoji, member in items:
-            if member in self.members_left:
-                await self.add_reaction(emoji)
-
-        # Add listener handlers and wait until there are no members left to pick
-        self.future = self.bot.loop.create_future()
-        self.bot.add_listener(self._process_pick, name='on_reaction_add')
-        await asyncio.wait_for(self.future, 600)
-        self.bot.remove_listener(self._process_pick, name='on_reaction_add')
-
-        return self.teams
-
-
-class MapDraftMenu(discord.Message):
-    """ Message containing the components for a map draft. """
-
-    def __init__(self, message, bot):
-        """ Copy constructor from a message and specific team draft args. """
-        # Copy all attributes from message object
-        for attr_name in message.__slots__:
-            try:
-                attr_val = getattr(message, attr_name)
-            except AttributeError:
-                continue
-
-            setattr(self, attr_name, attr_val)
-
-        # Add custom attributes 
-        self.bot = bot
-        self.ban_order = '12' * 20
-        self.captains = None
-        self.map_pool = None
-        self.maps_left = None
-        self.ban_number = None
-        self.future = None
-
-    @property
-    def _active_picker(self):
-        """ Get the active picker using the pick order and nummber. """
-        if self.ban_number is None or self.captains is None:
-            return None
-
-        picking_player_number = int(self.ban_order[self.ban_number])
-        return self.captains[picking_player_number - 1]  # Subtract 1 to get picker's index
-
-    def _draft_embed(self, title):
-        """ Generate the menu embed based on the current status of the map draft. """
-        embed = self.bot.embed_template(title=title)
-        embed.set_footer(text=self.bot.translate('map-draft-footer'))
-        maps_str = ''
-
-        if self.map_pool is not None and self.maps_left is not None:
-            for m in self.map_pool:
-                maps_str += f'{m.emoji}  {m.name}\n' if m.emoji in self.maps_left else f':heavy_multiplication_x:  ' \
-                            f'~~{m.name}~~\n '
-
-        status_str = ''
-
-        if self.captains is not None and self._active_picker is not None:
-            status_str += f'**{self.bot.translate("capt1")}:** {self.captains[0].mention}\n'
-            status_str += f'**{self.bot.translate("capt2")}:** {self.captains[1].mention}\n\n'
-            status_str += f'**{self.bot.translate("current-capt")}:** {self._active_picker.mention}'
-
-        embed.add_field(name=f'__{self.bot.translate("maps-left")}__', value=maps_str)
-        embed.add_field(name=f'__{self.bot.translate("info")}__', value=status_str)
-        return embed
-
-    async def _update_menu(self, title):
-        """ Update the message to reflect the current status of the map draft. """
-        await self.edit(embed=self._draft_embed(title))
-        awaitables = [self.clear_reaction(m.emoji) for m in self.map_pool if m.emoji not in self.maps_left]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
-
-    async def _process_ban(self, reaction, member):
-        """ Handler function for map ban reactions. """
-        # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or member != self._active_picker:
-            return
-
-        # Ban map if the emoji is valid
-        try:
-            map_ban = self.maps_left.pop(str(reaction))
-        except KeyError:
-            return
-
-        self.ban_number += 1
-
-        # Check if the draft is over
-        if len(self.maps_left) == 1:
-            if self.future is not None:
-                self.future.set_result(None)
-
-            return
-
-        await self._update_menu(self.bot.translate('user-banned-map').format(member.display_name, map_ban.name))
-
-    async def draft(self, pool, captain_1, captain_2):
-        """ Start the team draft and return the teams after it's finished. """
-        # Initialize draft
-        self.captains = [captain_1, captain_2]
-        self.map_pool = pool
-        self.maps_left = {m.emoji: m for m in self.map_pool}
-        self.ban_number = 0
-
-        if len(self.map_pool) % 2 == 0:
-            self.captains.reverse()
-
-        # Edit input message and add emoji button reactions
-        await self.edit(embed=self._draft_embed(self.bot.translate('map-bans-begun')))
-
-        for m in self.map_pool:
-            await self.add_reaction(m.emoji)
-
-        # Add listener handlers and wait until there are no maps left to ban
-        self.future = self.bot.loop.create_future()
-        self.bot.add_listener(self._process_ban, name='on_reaction_add')
-        await asyncio.wait_for(self.future, 600)
-        self.bot.remove_listener(self._process_ban, name='on_reaction_add')
-        await self.clear_reactions()
-
-        # Return class to original state after map drafting is done
-        map_pick = list(self.maps_left.values())[0]  # Get map pick before setting self.maps_left to None
-        self.captains = None
-        self.map_pool = None
-        self.maps_left = None
-        self.ban_number = None
-        self.future = None
-
-        return map_pick
-
-
-'''
-class MapVoteMenu(discord.Message):
-    """ Message containing the components for a map draft. """
-
-    def __init__(self, message, bot, members):
-        """ Copy constructor from a message and specific team draft args. """
-        # Copy all attributes from message object
-        for attr_name in message.__slots__:
-            try:
-                attr_val = getattr(message, attr_name)
-            except AttributeError:
-                continue
-
-            setattr(self, attr_name, attr_val)
-
-        # Add custom attributes
-        self.bot = bot
-        self.members = members
-        self.map_pool = None
-        self.ballots = None
-        self.maps_options = None
-        self.ranked_votes = None
-        self.future = None
-
-    def _vote_embed(self):
-        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        embed.add_field(name="Maps", value='\n'.join(f'{m.emoji} {m.name}' for m in self.map_pool))
-        embed.set_footer(text=self.bot.translate('vote-map-footer'))
-        return embed
-
-    async def _process_vote(self, reaction, member):
-        """"""
-        # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or member not in self.members:
-            return
-
-        # Add map vote if it is valid
-        if len(self.ranked_votes[member]) == 3:
-            return
-        
-        for c in self.maps_options:
-            if c.name == str(reaction) and c not in self.ranked_votes[member]:
-                self.ranked_votes[member].append(c)
-                self.ballots.append(Ballot(self.ranked_votes[member]))
-
-        if len(self.ranked_votes[member]) == 3:
-            for i, vote_option in enumerate(self.ranked_votes[member]):
-                print(f'Rank {i+1} :',vote_option.name)
-            print()
-        # Check if the voting is over        
-        for voter in self.ranked_votes:
-            if len(self.ranked_votes[voter]) != 3 or len(self.ranked_votes) != len(self.members):
-                return
-
-        if self.future is not None:
-            self.future.set_result(None)
-
-    async def vote(self, mpool):
-        """"""
-        self.map_pool = mpool
-        self.ballots = []
-        self.maps_options = []
-        self.ranked_votes = defaultdict(list)
-
-        for m in self.map_pool:
-            self.maps_options.append(Candidate(m.emoji))
-
-        await self.edit(embed=self._vote_embed())
-
-        for map_option in self.map_pool:
-            await self.add_reaction(map_option.emoji)
-
-        # Add listener handlers and wait until there are no maps left to ban
-        self.future = self.bot.loop.create_future()
-        self.bot.add_listener(self._process_vote, name='on_reaction_add')
-
-        try:
-            await asyncio.wait_for(self.future, 60)
-        except asyncio.TimeoutError:
-            pass
-
-        self.bot.remove_listener(self._process_vote, name='on_reaction_add')
-        try:
-            await self.clear_reactions()
-        except NotFound:
-            pass
-
-        election_result = pyrankvote.instant_runoff_voting(self.maps_options, self.ballots)
-        print(election_result)
-        winner = election_result.get_winners()[0].name
-        pick_map = [m for m in self.map_pool if m.emoji == winner][0]
-        print(pick_map.name)
-
-        self.future = None
-        self.map_pool = None
-        self.ballots = None
-        self.maps_options = None
-        self.ranked_votes = None
-
-        return pick_map
-'''
-
-
-class MapVoteMenu(discord.Message):
-    """ Message containing the components for a map draft. """
-
-    def __init__(self, message, bot, members):
-        """ Copy constructor from a message and specific team draft args. """
-        # Copy all attributes from message object
-        for attr_name in message.__slots__:
-            try:
-                attr_val = getattr(message, attr_name)
-            except AttributeError:
-                continue
-
-            setattr(self, attr_name, attr_val)
-
-        # Add custom attributes
-        self.bot = bot
-        self.members = members
-        self.voted_members = None
-        self.map_pool = None
-        self.map_votes = None
-        self.future = None
-        self.tie_count = 0
-
-    def _vote_embed(self):
-        embed = self.bot.embed_template(title=self.bot.translate('vote-map-started'))
-        str_value = '--------------------\n'
-        str_value += '\n'.join(
-            f'{emoji_numbers[self.map_votes[m.emoji]]} {m.emoji} {m.name} '
-            f'{":small_orange_diamond:" if self.map_votes[m.emoji] == max(self.map_votes.values()) and self.map_votes[m.emoji] != 0 else ""} '
-            for m in self.map_pool)
-        embed.add_field(name=f':repeat_one: :map: __{self.bot.translate("maps")}__', value=str_value)
-        embed.set_footer(text=self.bot.translate('vote-map-footer'))
-        return embed
-
-    async def _process_vote(self, reaction, member):
-        """"""
-        # Check that reaction is on this message and user is not the bot
-        if reaction.message.id != self.id or member == self.author:
-            return
-
-        if member not in self.members or str(reaction) not in [m.emoji for m in self.map_pool]:
-            await self.remove_reaction(reaction, member)
-            return
-
-        if member in self.voted_members:
-            await self.remove_reaction(reaction, member)
-            return
-        # Add map vote if it is valid
-        self.map_votes[str(reaction)] += 1
-
-        self.voted_members[member] = str(reaction)
-        await self.edit(embed=self._vote_embed())
-        # Check if the voting is over
-        if len(self.voted_members) == len(self.members):
-            if self.future is not None:
-                self.future.set_result(None)
-
-    async def vote(self, mpool):
-        """"""
-        self.voted_members = {}
-        self.map_pool = mpool
-        self.map_votes = {m.emoji: 0 for m in self.map_pool}
-        await self.edit(embed=self._vote_embed())
-
-        for map_option in self.map_pool:
-            await self.add_reaction(map_option.emoji)
-
-        # Add listener handlers and wait until there are no maps left to ban
-        self.future = self.bot.loop.create_future()
-        self.bot.add_listener(self._process_vote, name='on_reaction_add')
-
-        try:
-            await asyncio.wait_for(self.future, 60)
-        except asyncio.TimeoutError:
-            pass
-
-        self.bot.remove_listener(self._process_vote, name='on_reaction_add')
-        try:
-            await self.clear_reactions()
-        except NotFound:
-            pass
-
-        # Gather results
-        winners_emoji = []
-        winners_votes = 0
-
-        for emoji, votes in self.map_votes.items():
-            if votes > winners_votes:
-                winners_emoji.clear()
-                winners_emoji.append(emoji)
-                winners_votes = votes
-            elif votes == winners_votes:
-                winners_emoji.append(emoji)
-
-        self.map_pool = [m for m in mpool if m.emoji in winners_emoji]
-
-        # Return class to original state after map drafting is done
-        self.voted_members = None
-        self.map_votes = None
-        self.future = None
-
-        if len(winners_emoji) == 1:
-            return self.map_pool[0]
-        elif len(winners_emoji) == 2 and self.tie_count == 1:
-            return random.choice(self.map_pool)
-        else:
-            if len(winners_emoji) == 2:
-                self.tie_count += 1
-            return await self.vote(self.map_pool)
+scheduler = AsyncIOScheduler()
+scheduler.start()
 
 
 class MatchCog(commands.Cog):
@@ -585,7 +33,7 @@ class MatchCog(commands.Cog):
 
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
-        menu = TeamDraftMenu(message, self.bot, members)
+        menu = menus.TeamDraftMenu(message, self.bot, members)
         teams = await menu.draft()
         return teams[0], teams[1]
 
@@ -622,131 +70,97 @@ class MatchCog(commands.Cog):
     async def randomize_teams(members):
         """ Randomly split a list of members in half. """
         temp_members = members.copy()
-        random.shuffle(temp_members)
+        shuffle(temp_members)
         team_size = len(temp_members) // 2
         return temp_members[:team_size], temp_members[team_size:]
 
     async def draft_maps(self, message, mpool, captain_1, captain_2):
         """"""
-        menu = MapDraftMenu(message, self.bot)
+        menu = menus.MapDraftMenu(message, self.bot)
         map_pick = await menu.draft(mpool, captain_1, captain_2)
         return map_pick
 
     async def vote_maps(self, message, mpool, members):
         """"""
-        menu = MapVoteMenu(message, self.bot, members)
+        menu = menus.MapVoteMenu(message, self.bot, members)
         voted_map = await menu.vote(mpool)
         return voted_map
 
     @staticmethod
     async def random_map(mpool):
         """"""
-        return random.choice(mpool)
+        return choice(mpool)
 
-    async def setup_match_channels(self, guild, match_id, team_one, team_two):
+    async def create_match_channels(self, category, match_id, team_one, team_two):
         """Create teams voice channels and move players inside"""
 
-        match_category = await guild.create_category_channel(f'{self.bot.translate("match")}{match_id}')
-        role = discord.utils.get(guild.roles, name='@everyone')
+        match_category = await category.guild.create_category_channel(f'{self.bot.translate("match")}{match_id}')
+        role = discord.utils.get(category.guild.roles, name='@everyone')
 
-        voice_channel_one = await guild.create_voice_channel(
+        channel_team_one = await category.guild.create_voice_channel(
             name=f'{self.bot.translate("team")} {team_one[0].display_name}',
             category=match_category,
             user_limit=len(team_one))
-        await voice_channel_one.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_one.set_permissions(role, connect=False, read_messages=True)
 
-        voice_channel_two = await guild.create_voice_channel(
+        channel_team_two = await category.guild.create_voice_channel(
             name=f'{self.bot.translate("team")} {team_two[0].display_name}',
             category=match_category,
             user_limit=len(team_two))
-        await voice_channel_two.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_two.set_permissions(role, connect=False, read_messages=True)
 
-        if guild not in self.match_dict:
-            self.match_dict[guild] = {}
+        if category not in self.match_dict:
+            self.match_dict[category] = {}
 
-        self.match_dict[guild][match_id] = [match_category, voice_channel_one, voice_channel_two, team_one, team_two]
+        self.match_dict[category][match_id] = [match_category, channel_team_one, channel_team_two, team_one, team_two]
 
-        vc_id = await self.bot.get_guild_data(guild, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(vc_id)
+        lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
+        lobby = self.bot.get_channel(lobby_id)
 
-        for t1_player in range(len(team_one)):
-            await voice_channel_one.set_permissions(team_one[t1_player], connect=True)
-            await voice_lobby.set_permissions(team_one[t1_player], connect=False)
+        for p1, p2 in zip(team_one, team_two):
+            await channel_team_one.set_permissions(p1, connect=True)
+            await lobby.set_permissions(p1, connect=False)
+            await channel_team_two.set_permissions(p2, connect=True)
+            await lobby.set_permissions(p2, connect=False)            
             try:
-                await team_one[t1_player].move_to(voice_channel_one)
+                await p1.move_to(channel_team_one)
+            except (AttributeError, discord.errors.HTTPException):
+                pass 
+            try:
+                await p2.move_to(channel_team_two)
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
-        for t2_player in range(len(team_two)):
-            await voice_channel_two.set_permissions(team_two[t2_player], connect=True)
-            await voice_lobby.set_permissions(team_two[t2_player], connect=False)
-            try:
-                await team_two[t2_player].move_to(voice_channel_two)
-            except (AttributeError, discord.errors.HTTPException):
-                pass
-
-    async def delete_match_channels(self, message, matchid):
+    async def delete_match_channels(self, category, matchid):
         """ Move players to another channels and remove voice channels on match end. """
-        vc_id = await self.bot.get_guild_data(message.guild, 'voice_lobby')
-        voice_lobby = self.bot.get_channel(vc_id)
-        ended_match = self.match_dict[message.guild][matchid]
-        match_players = ended_match[3] + ended_match[4]
-
-        role = discord.utils.get(voice_lobby.guild.roles, name='@everyone')
-
-        vc_ended_match = await voice_lobby.guild.create_voice_channel(name=self.bot.translate('match-over'),
-                                                                      category=ended_match[0],
-                                                                      user_limit=len(match_players))
-        await vc_ended_match.set_permissions(role, connect=False, read_messages=True)
+        lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
+        lobby = self.bot.get_channel(lobby_id)
+        prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+        prelobby = self.bot.get_channel(prelobby_id)
+        match_players = self.match_dict[category][matchid][3] + self.match_dict[category][matchid][4]
 
         for player in match_players:
-            await voice_lobby.set_permissions(player, overwrite=None)
-
-        for player in match_players:
+            await lobby.set_permissions(player, overwrite=None)
             try:
-                await player.move_to(vc_ended_match)
+                await player.move_to(prelobby)
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
-        await ended_match[1].delete()
-        await ended_match[2].delete()
-        await asyncio.sleep(60)
-        await vc_ended_match.delete()
-        await ended_match[0].delete()
-        self.match_dict[message.guild].pop(matchid)
+        for channel in reversed(self.match_dict[category][matchid][:3]):
+            await channel.delete()
 
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        """ Listen to message in results channel and get ended match from webhooks message. """
-        if len(message.embeds) < 1:
-            return
+        self.match_dict[category].pop(matchid)
 
-        results_channel_id = await self.bot.get_guild_data(message.guild, 'text_results')
-        if message.channel.id != results_channel_id:
-            return
-
-        panel_url = f'{self.bot.api_helper.base_url}/match/'
-        if panel_url not in message.embeds[0].description:
-            return
-            
-        match_id = re.findall('match/(\d+)', message.embeds[0].description)[0]
-
-        try:
-            if match_id in self.match_dict[message.guild]:
-                await self.delete_match_channels(message, match_id)
-        except KeyError:
-            return
-
-    def _ready_embed(self, ctx):
+    def _ready_embed(self, category):
         str_value = ''
         description = self.bot.translate('react-ready').format('✅')
         embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
-        
-        for num, member in enumerate(self.members[ctx.guild], start=1):
-            if member not in self.reactors[ctx.guild]:
-                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[ctx.guild][num-1].league_profile})\n'
+
+        for num, member in enumerate(self.members[category], start=1):
+            if member not in self.reactors[category]:
+                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n'
             else:
-                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[ctx.guild][num-1].league_profile})\n'
+                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n'
 
         embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__",
                         value='-------------------\n' + str_value)
@@ -755,98 +169,99 @@ class MatchCog(commands.Cog):
 
     async def _process_ready(self, reaction, member):
         """ Check if all players in the queue have readied up. """
-        if member.id == self.ready_message[member.guild].author.id:
+        if member.id == self.ready_message[reaction.message.channel.category].author.id:
             return
         # Check if this is a message we care about
-        if reaction.message.id != self.ready_message[member.guild].id:
+        if reaction.message.id != self.ready_message[reaction.message.channel.category].id:
             return
         # Check if this is a member and reaction we care about
-        if member not in self.members[member.guild] or reaction.emoji != '✅':
-            await self.ready_message[member.guild].remove_reaction(reaction, member)
+        if member not in self.members[reaction.message.channel.category] or reaction.emoji != '✅':
+            await self.ready_message[reaction.message.channel.category].remove_reaction(reaction, member)
             return
 
-        self.reactors[member.guild].add(member)
-        await self.ready_message[member.guild].edit(embed=self._ready_embed(member))
-        if self.reactors[member.guild].issuperset(self.members[member.guild]):  # All queued members have reacted
-            if self.future[member.guild] is not None:
-                self.future[member.guild].set_result(None)
+        self.reactors[reaction.message.channel.category].add(member)
+        await self.ready_message[reaction.message.channel.category].edit(embed=self._ready_embed(reaction.message.channel.category))
+        if self.reactors[reaction.message.channel.category].issuperset(self.members[reaction.message.channel.category]):  # All queued members have reacted
+            if self.future[reaction.message.channel.category] is not None:
+                self.future[reaction.message.channel.category].set_result(None)
 
-    async def start_match(self, ctx, members):
+    async def start_match(self, category, members):
         """ Ready all the members up and start a match. """
-        # Notify everyone to ready up
-        self.members[ctx.guild] = members
-        self.reactors[ctx.guild] = set()  # Track who has readied up
-        self.future[ctx.guild] = self.bot.loop.create_future()
-        self.queue_profiles[ctx.guild] = [await self.bot.api_helper.get_player(member.id) for member in members]
-
         queue_cog = self.bot.get_cog('QueueCog')
+        self.members[category] = members
+        self.reactors[category] = set()  # Track who has readied up
+        self.future[category] = self.bot.loop.create_future()
+        self.queue_profiles[category] = [await self.bot.api_helper.get_player(member.id) for member in members]
+
         member_mentions = [member.mention for member in members]
-        burst_embed = self._ready_embed(ctx)
-        msg = queue_cog.last_queue_msgs.get(ctx.guild)
-        channel_id = await self.bot.get_guild_data(ctx.guild, 'text_queue')
-        text_channel = ctx.guild.get_channel(channel_id)
+        burst_embed = self._ready_embed(category)
+        msg = queue_cog.last_queue_msgs.get(category)
+        channel_id = await self.bot.get_league_data(category, 'text_queue')
+        text_channel = category.guild.get_channel(channel_id)
 
         if msg is not None:
             await msg.delete()
-            queue_cog.last_queue_msgs.pop(ctx.guild)
+            queue_cog.last_queue_msgs.pop(category)
 
-        index_channel = ctx.guild.channels.index(text_channel)
-        self.ready_message[ctx.guild] = await ctx.guild.channels[index_channel].send(''.join(member_mentions),
-                                                                                     embed=burst_embed)
-        await self.ready_message[ctx.guild].add_reaction('✅')
+        self.ready_message[category] = await text_channel.send(''.join(member_mentions), embed=burst_embed)
+        await self.ready_message[category].add_reaction('✅')
 
         self.bot.add_listener(self._process_ready, name='on_reaction_add')
         try:
-            await asyncio.wait_for(self.future[ctx.guild], 60)
+            await asyncio.wait_for(self.future[category], 60)
         except asyncio.TimeoutError:  # Not everyone readied up
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
-            unreadied = set(members) - self.reactors[ctx.guild]
+            unreadied = set(members) - self.reactors[category]
             awaitables = [
-                self.ready_message[ctx.guild].clear_reactions(),
-                self.bot.db_helper.delete_queued_users(ctx.guild.id, *(member.id for member in unreadied))
+                self.ready_message[category].clear_reactions(),
+                self.bot.db_helper.delete_queued_users(category.id, *(member.id for member in unreadied))
             ]
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
+            prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+            prelobby = category.guild.get_channel(prelobby_id)
             title = self.bot.translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
             # disconnect unreadied players from the lobby voice channel
             for player in unreadied:
                 try:
-                    await player.move_to(None)
+                    await player.move_to(prelobby)
                 except (AttributeError, discord.errors.HTTPException):
                     pass
 
-            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
+            await self.ready_message[category].edit(content='', embed=burst_embed)
             return False  # Not everyone readied up
         else:  # Everyone readied up
             # Attempt to make teams and start match
             self.bot.remove_listener(self._process_ready, name='on_reaction_add')
             awaitables = [
-                self.ready_message[ctx.guild].clear_reactions(),
-                self.bot.db_helper.get_guild(ctx.guild.id)
+                self.ready_message[category].clear_reactions(),
+                self.bot.db_helper.get_league(category.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
+
             team_method = results[1]['team_method']
             map_method = results[1]['map_method']
-            mpool = [m for m in self.bot.all_maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
 
             if team_method == 'random' or len(members) == 2:
                 team_one, team_two = await self.randomize_teams(members)
             elif team_method == 'autobalance':
                 team_one, team_two = await self.autobalance_teams(members)
             elif team_method == 'captains':
-                team_one, team_two = await self.draft_teams(self.ready_message[ctx.guild], members)
+                team_one, team_two = await self.draft_teams(self.ready_message[category], members)
             else:
                 raise ValueError(self.bot.translate('team-method-not-valid').format(team_method))
 
             await asyncio.sleep(1)
             # Get map pick
+            mpool = [m for m in self.bot.all_maps if await self.bot.get_league_data(category, m.dev_name)]
+
             if map_method == 'captains':
-                map_pick = await self.draft_maps(self.ready_message[ctx.guild], mpool, team_one[0], team_two[0])
+                map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
             elif map_method == 'vote':
-                map_pick = await self.vote_maps(self.ready_message[ctx.guild], mpool, members)
+                map_pick = await self.vote_maps(self.ready_message[category], mpool, members)
             elif map_method == 'random':
                 map_pick = await self.random_map(mpool)
             else:
@@ -854,24 +269,16 @@ class MatchCog(commands.Cog):
 
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
-            await self.ready_message[ctx.guild].edit(content='', embed=burst_embed)
-
-            results_id = await self.bot.get_guild_data(ctx.guild, 'text_results')
-            results_channel = ctx.guild.get_channel(results_id)
-            webhook = await results_channel.webhooks()
-
-            if not webhook:
-                webhook.append(await results_channel.create_webhook(name='League Results'))
+            await self.ready_message[category].edit(content='', embed=burst_embed)
 
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two,
-                                                              map_pick.dev_name, webhook[0].url)  # Request match from API
+                match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.dev_name)
             except aiohttp.ClientResponseError as e:
                 description = self.bot.translate('no-servers')
                 burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
-                await self.ready_message[ctx.guild].edit(embed=burst_embed)
-                traceback.print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
+                await self.ready_message[category].edit(embed=burst_embed)
+                print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
             else:
                 await asyncio.sleep(3)
@@ -891,8 +298,16 @@ class MatchCog(commands.Cog):
                                       value=''.join(f'{num}. [{member.display_name}]({team2_profiles[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
                 burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
 
-            await self.ready_message[ctx.guild].edit(embed=burst_embed)
-            await self.setup_match_channels(ctx.guild, str(match.id), team_one, team_two)
+            await self.ready_message[category].edit(embed=burst_embed)
+            await self.create_match_channels(category, str(match.id), team_one, team_two)
+
+            async def check_live():
+                live = await self.bot.api_helper.is_match_live(str(match.id))
+                if not live:
+                    await self.delete_match_channels(category, str(match.id))
+                    scheduler.remove_job(str(match.id))
+
+            scheduler.add_job(check_live, 'interval', seconds=10, id=str(match.id))
 
             return True  # Everyone readied up
 
@@ -904,7 +319,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        team_method = await self.bot.get_guild_data(ctx.guild, 'team_method')
+        team_method = await self.bot.get_league_data(ctx.channel.category, 'team_method')
         valid_methods = ['captains', 'autobalance', 'random']
 
         if method is None:
@@ -916,7 +331,7 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('team-method-already').format(team_method)
             elif method in valid_methods:
                 title = self.bot.translate('set-team-method').format(method)
-                await self.bot.db_helper.update_guild(ctx.guild.id, team_method=method)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, team_method=method)
             else:
                 title = self.bot.translate('team-valid-methods').format(valid_methods[0], valid_methods[1],
                                                                         valid_methods[2])
@@ -932,7 +347,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        guild_data = await self.bot.db_helper.get_guild(ctx.guild.id)
+        guild_data = await self.bot.db_helper.get_league(ctx.channel.category_id)
         captain_method = guild_data['captain_method']
         valid_methods = ['volunteer', 'rank', 'random']
 
@@ -945,7 +360,7 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('captains-method-already').format(captain_method)
             elif method in valid_methods:
                 title = self.bot.translate('set-captains-method').format(method)
-                await self.bot.db_helper.update_guild(ctx.guild.id, captain_method=method)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, captain_method=method)
             else:
                 title = self.bot.translate('captains-valid-method').format(valid_methods[0], valid_methods[1],
                                                                            valid_methods[2])
@@ -961,7 +376,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_method = await self.bot.get_guild_data(ctx.guild, 'map_method')
+        map_method = await self.bot.get_league_data(ctx.channel.category, 'map_method')
         valid_methods = ['captains', 'vote', 'random']
 
         if method is None:
@@ -973,7 +388,7 @@ class MatchCog(commands.Cog):
                 title = self.bot.translate('map-method-already').format(map_method)
             elif method in valid_methods:
                 title = self.bot.translate('set-map-method').format(method)
-                await self.bot.db_helper.update_guild(ctx.guild.id, map_method=method)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, map_method=method)
             else:
                 title = self.bot.translate('map-valid-method').format(valid_methods[0], valid_methods[1],
                                                                       valid_methods[2])
@@ -989,7 +404,7 @@ class MatchCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_pool = [m.dev_name for m in self.bot.all_maps if await self.bot.get_guild_data(ctx.guild, m.dev_name)]
+        map_pool = [m.dev_name for m in self.bot.all_maps if await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
 
         if len(args) == 0:
             embed = self.bot.embed_template(title=self.bot.translate('map-pool'))
@@ -1019,7 +434,7 @@ class MatchCog(commands.Cog):
                 description = self.bot.translate('map-pool-fewer-3')
             else:
                 map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.all_maps}
-                await self.bot.db_helper.update_guild(ctx.guild.id, **map_pool_data)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, **map_pool_data)
 
             embed = self.bot.embed_template(title=self.bot.translate('modified-map-pool'), description=description)
 
@@ -1048,7 +463,7 @@ class MatchCog(commands.Cog):
             msg = f'{self.bot.translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
             try:
-                if args[0] in self.match_dict[ctx.guild] and await self.bot.api_helper.end_match(args[0]):
+                if args[0] in self.match_dict[ctx.channel.category] and await self.bot.api_helper.end_match(args[0]):
                     msg = self.bot.translate("match-cancelled").format(args[0])
                 else:
                     msg = self.bot.translate("invalid-match-id")

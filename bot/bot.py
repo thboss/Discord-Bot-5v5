@@ -38,11 +38,6 @@ class LeagueBot(commands.AutoShardedBot):
         self.discord_token = discord_token
         self.api_base_url = api_base_url
         self.api_key = api_key
-        try:
-            self.int_remaining_alerts = int(os.environ['DISCORD_LEAGUE_REMAINING_ALERTS'])
-        except (KeyError, ValueError):
-            self.int_remaining_alerts = 0
-        self.language = os.environ['DISCORD_LEAGUE_LANGUAGE']
         self.db_pool = db_pool
         self.all_maps = []
 
@@ -82,8 +77,8 @@ class LeagueBot(commands.AutoShardedBot):
 
     def translate(self, text):
         try:
-            return self.translations[self.language][text]
-        except KeyError:
+            return self.translations[os.environ['DISCORD_LEAGUE_LANGUAGE']][text]
+        except (KeyError, ValueError):
             return self.translations['en'][text]
 
     def embed_template(self, **kwargs):
@@ -91,14 +86,22 @@ class LeagueBot(commands.AutoShardedBot):
         kwargs['color'] = self.color
         return discord.Embed(**kwargs)
 
-    async def get_guild_data(self, guild, data):
-        guild_data = await self.db_helper.get_guild(guild.id)
-        return guild_data[data]
+    async def get_league_data(self, category, data):
+        guild_data = await self.db_helper.get_league(category.id)
+        try:
+            return guild_data[data]
+        except KeyError:
+            return None
 
     async def isValidChannel(self, ctx):
-        channel_id = await self.get_guild_data(ctx.guild, 'text_commands')
+        try:
+            channel_id = await self.get_league_data(ctx.channel.category, 'text_commands')
+        except AttributeError:
+            channel_id = None
         commands_channel = self.get_channel(channel_id)
         if ctx.message.channel != commands_channel:
+            embed = self.embed_template(title='Invalid channel')
+            await ctx.send(embed=embed)
             return False
         return True
 
@@ -122,104 +125,13 @@ class LeagueBot(commands.AutoShardedBot):
                 self.all_maps.append(
                     Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
 
-    async def create_league(self):
-        """ Setup required channels on guilds. """
-        for guild in self.guilds:
-            roles = [n.name for n in guild.roles]
-            everyone_role = get(guild.roles, name='@everyone')
-
-            categ_id = await self.get_guild_data(guild, 'category')
-            pug_role_id = await self.get_guild_data(guild, 'pug_role')
-            alert_role_id = await self.get_guild_data(guild, 'alerts_role')
-            queue_id = await self.get_guild_data(guild, 'text_queue')
-            commands_id = await self.get_guild_data(guild, 'text_commands')
-            results_id = await self.get_guild_data(guild, 'text_results')
-            lobby_id = await self.get_guild_data(guild, 'voice_lobby')
-
-            if categ_id is not None:
-                categ = guild.get_channel(categ_id)
-                if categ is None:
-                    categ = await guild.create_category_channel(name='csgo_league')   
-            else:
-                categ = await guild.create_category_channel(name='csgo_league')
-
-            if pug_role_id is not None:
-                pug_role = guild.get_role(pug_role_id)
-                if pug_role is None:
-                    pug_role = await guild.create_role(name='csgo_league_linked')
-            else:
-                pug_role = await guild.create_role(name='csgo_league_linked')
-
-            if alert_role_id is not None:
-                alerts_role = guild.get_role(alert_role_id)
-                if alerts_role is None:
-                    alerts_role = await guild.create_role(name='csgo_league_alerts')
-            else:
-                alerts_role = await guild.create_role(name='csgo_league_alerts')
-
-            if queue_id is not None:
-                text_channel_queue = guild.get_channel(queue_id)
-                if text_channel_queue is None:
-                    text_channel_queue = await guild.create_text_channel(name='csgo_league_queue')
-            else:
-                text_channel_queue = await guild.create_text_channel(name='csgo_league_queue', category=categ)
-
-            if commands_id is not None:
-                text_channel_commands = guild.get_channel(commands_id)
-                if text_channel_commands is None:
-                    text_channel_commands = await guild.create_text_channel(name='csgo_league_commands')
-            else:
-                text_channel_commands = await guild.create_text_channel(name='csgo_league_commands', category=categ)
-
-            if results_id is not None:
-                text_channel_results = guild.get_channel(results_id)
-                if text_channel_results is None:
-                    text_channel_results = await guild.create_text_channel(name='csgo_league_results')
-            else:
-                text_channel_results = await guild.create_text_channel(name='csgo_league_results', category=categ)
-
-            if lobby_id is not None:
-                voice_channel_lobby = guild.get_channel(lobby_id)
-                if voice_channel_lobby is None:
-                    voice_channel_lobby = await guild.create_voice_channel(name='csgo_league_lobby')
-            else:
-                voice_channel_lobby = await guild.create_voice_channel(name='csgo_league_lobby',
-                                                                       category=categ, user_limit=10)
-
-            await self.db_helper.update_guild(guild.id, category=categ.id),
-            await self.db_helper.update_guild(guild.id, pug_role=pug_role.id),
-            await self.db_helper.update_guild(guild.id, alerts_role=alerts_role.id),
-            await self.db_helper.update_guild(guild.id, text_queue=text_channel_queue.id),
-            await self.db_helper.update_guild(guild.id, text_commands=text_channel_commands.id),
-            await self.db_helper.update_guild(guild.id, text_results=text_channel_results.id),
-            await self.db_helper.update_guild(guild.id, voice_lobby=voice_channel_lobby.id),
-            await text_channel_queue.set_permissions(everyone_role, send_messages=False),
-            await text_channel_results.set_permissions(everyone_role, send_messages=False),
-            await voice_channel_lobby.set_permissions(everyone_role, connect=False),
-            await voice_channel_lobby.set_permissions(pug_role, connect=True)
-            # Empty queue users on bot start
-            await self.db_helper.delete_all_queued_users(guild.id)
-            for member in voice_channel_lobby.members:
-                await member.move_to(None)
-                await asyncio.sleep(1)
-
     @commands.Cog.listener()
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
-        await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
+        print('Creating emojis...')
+        # await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
         await self.create_emojis()
-        await self.create_league()
         print('Bot is ready!')
-
-    @commands.Cog.listener()
-    async def on_guild_join(self, guild):
-        """ Insert the newly added guild to the guilds table. """
-        await self.db_helper.insert_guilds(guild.id)
-        await self.create_league()
-
-    @commands.Cog.listener()
-    async def on_guild_remove(self, guild):
-        await self.db_helper.delete_guilds(guild.id)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
