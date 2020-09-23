@@ -70,10 +70,9 @@ class LeagueBot(commands.AutoShardedBot):
         # Add cogs
         self.add_cog(cogs.ConsoleCog(self))
         self.add_cog(cogs.HelpCog(self))
-        self.add_cog(cogs.AuthCog(self))
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
-        self.add_cog(cogs.StatsCog(self))
+        self.add_cog(cogs.CommandsCog(self))
 
     def translate(self, text):
         try:

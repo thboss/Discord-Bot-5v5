@@ -3,7 +3,7 @@
 from discord.ext import commands
 import Levenshtein as lev
 
-GITHUB = 'https://github.com/csgo-league/csgo-league-bot'  # TODO: Use git API to get link to repo?
+GITHUB = 'https://github.com/thboss/Discord-Bot-5v5'  # TODO: Use git API to get link to repo?
 SERVER_INV = 'https://discord.gg/b5MhANU'
 
 
