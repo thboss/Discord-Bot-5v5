@@ -256,15 +256,19 @@ class ApiHelper:
             resp_json = await resp.json()
             return resp_json['success']
 
-    async def start_match(self, team_one, team_two, spectators, map_dev):
+    async def start_match(self, team_one, team_two, spectators=None, map_pick=None):
         """ Get a match server from the API. """
         url = f'{self.base_url}/match/start'
         data = {
             'team_one': {member.id: member.display_name for member in team_one},
             'team_two': {member.id: member.display_name for member in team_two},
-            'spectators': spectators,
-            'maps': map_dev
         }
 
+        if spectators:
+            data['spectators'] = spectators
+
+        if map_pick:
+            data['maps'] = map_pick
+            
         async with self.session.post(url=url, headers=self.headers, json=data) as resp:
             return MatchServer(await resp.json())
