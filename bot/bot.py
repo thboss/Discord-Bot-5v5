@@ -13,6 +13,7 @@ import json
 import sys
 import traceback
 import os
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 class Map:
@@ -63,6 +64,9 @@ class LeagueBot(commands.AutoShardedBot):
 
         # Trigger typing before every command
         self.before_invoke(commands.Context.trigger_typing)
+
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.start()
 
         # Add cogs
         self.add_cog(cogs.ConsoleCog(self))
