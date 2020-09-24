@@ -254,6 +254,23 @@ class CommandsCog(commands.Cog):
             embed = self.bot.embed_template(title=translate('required-perm').format(missing_perm))
             await ctx.send(embed=embed)
 
+    @commands.command(usage='spectators',
+                      brief='View the match spectators (Must have admin perms)')
+    @commands.has_permissions(administrator=True)
+    async def spectators(self, ctx):
+        """ View the spectators. """
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        spect_ids = await self.bot.db_helper.get_spect_users(ctx.channel.category_id)
+
+        spect_members = [ctx.guild.get_member(spect_id) for spect_id in spect_ids]
+
+        embed = self.bot.embed_template()
+        embed.add_field(name=f'__Spectators__',
+                        value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
+        await ctx.send(embed=embed)
+
     @commands.command(usage='addspect <mention>',
                       brief='Add user to the match spectators (Must have admin perms)')
     @commands.has_permissions(administrator=True)

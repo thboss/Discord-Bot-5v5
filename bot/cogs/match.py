@@ -302,7 +302,7 @@ class MatchCog(commands.Cog):
                 burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team2_profiles[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
                 burst_embed.add_field(name=f'__Spectators__',
-                                      value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))                                      
+                                      value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
                 burst_embed.set_footer(text=translate('server-message-footer'))
 
             await self.ready_message[category].edit(embed=burst_embed)
