@@ -185,6 +185,58 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'user_id')
 
+    async def get_spect_users(self, guild_id):
+        """ Get all the queued users of the guild from the spect_users table. """
+        statement = (
+            'SELECT user_id FROM spect_users\n'
+            '    WHERE guild_id = $1;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                queue = await connection.fetch(statement, guild_id)
+
+        return self._get_record_attrs(queue, 'user_id')
+
+    async def insert_spect_users(self, guild_id, *user_ids):
+        """ Insert multiple users of a guild into the spect_users table. """
+        statement = (
+            'INSERT INTO spect_users (guild_id, user_id)\n'
+            '    (SELECT * FROM unnest($1::spect_users[]));'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(statement, [(guild_id, user_id) for user_id in user_ids])
+
+    async def delete_spect_users(self, guild_id, *user_ids):
+        """ Delete multiple users of a guild from the spect_users table. """
+        statement = (
+            'DELETE FROM spect_users\n'
+            '    WHERE guild_id = $1 AND user_id = ANY($2::BIGINT[])\n'
+            '    RETURNING user_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id, user_ids)
+
+        return self._get_record_attrs(deleted, 'user_id')
+
+    async def delete_all_spect_users(self, guild_id):
+        """ Delete all users of a guild from the spect_users table. """
+        statement = (
+            'DELETE FROM spect_users\n'
+            '    WHERE guild_id = $1\n'
+            '    RETURNING user_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id)
+
+        return self._get_record_attrs(deleted, 'user_id')        
+
     async def get_league(self, league_id):
         """ Get a guild's row from the leagues table. """
         return await self._get_row('leagues', league_id)

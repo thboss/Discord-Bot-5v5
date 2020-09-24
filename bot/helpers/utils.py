@@ -1,6 +1,19 @@
 # utils.py
 
 import math
+import os
+import json
+
+
+with open('translations.json', 'r') as f:
+    translations = json.load(f)
+
+
+def translate(text):
+    try:
+        return translations[os.environ['DISCORD_LEAGUE_LANGUAGE']][text]
+    except (KeyError, ValueError):
+        return translations['en'][text]
 
 
 def align_text(text, length, align='center'):

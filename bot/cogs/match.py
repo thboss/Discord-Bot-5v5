@@ -6,6 +6,7 @@ import discord
 from discord.ext import commands
 
 from . import menus
+from bot.helpers.utils import translate
 
 from random import shuffle, choice
 from traceback import print_exception
@@ -40,7 +41,7 @@ class MatchCog(commands.Cog):
         """ Balance teams based on players' RankMe score. """
         # Only balance teams with even amounts of players
         if len(member_ids) % 2 != 0:
-            raise ValueError(self.bot.translate('members-must-even'))
+            raise ValueError(translate('members-must-even'))
 
         # Get players and sort by RankMe score
         members_dict = dict(
@@ -93,17 +94,17 @@ class MatchCog(commands.Cog):
     async def create_match_channels(self, category, match_id, team_one, team_two):
         """Create teams voice channels and move players inside"""
 
-        match_category = await category.guild.create_category_channel(f'{self.bot.translate("match")}{match_id}')
+        match_category = await category.guild.create_category_channel(f'{translate("match")}{match_id}')
         role = discord.utils.get(category.guild.roles, name='@everyone')
 
         channel_team_one = await category.guild.create_voice_channel(
-            name=f'{self.bot.translate("team")} {team_one[0].display_name}',
+            name=f'{translate("team")} {team_one[0].display_name}',
             category=match_category,
             user_limit=len(team_one))
         await channel_team_one.set_permissions(role, connect=False, read_messages=True)
 
         channel_team_two = await category.guild.create_voice_channel(
-            name=f'{self.bot.translate("team")} {team_two[0].display_name}',
+            name=f'{translate("team")} {team_two[0].display_name}',
             category=match_category,
             user_limit=len(team_two))
         await channel_team_two.set_permissions(role, connect=False, read_messages=True)
@@ -152,8 +153,8 @@ class MatchCog(commands.Cog):
 
     def _ready_embed(self, category):
         str_value = ''
-        description = self.bot.translate('react-ready').format('✅')
-        embed = self.bot.embed_template(title=self.bot.translate('queue-filled'), description=description)
+        description = translate('react-ready').format('✅')
+        embed = self.bot.embed_template(title=translate('queue-filled'), description=description)
 
         for num, member in enumerate(self.members[category], start=1):
             if member not in self.reactors[category]:
@@ -161,7 +162,7 @@ class MatchCog(commands.Cog):
             else:
                 str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n'
 
-        embed.add_field(name=f":hourglass: __{self.bot.translate('player')}__",
+        embed.add_field(name=f":hourglass: __{translate('player')}__",
                         value='-------------------\n' + str_value)
         del str_value, description
         return embed
@@ -220,9 +221,9 @@ class MatchCog(commands.Cog):
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
             prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
             prelobby = category.guild.get_channel(prelobby_id)
-            title = self.bot.translate('not-all-ready')
+            title = translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
-            burst_embed.set_footer(text=self.bot.translate('not-ready-removed'))
+            burst_embed.set_footer(text=translate('not-ready-removed'))
             # disconnect unreadied players from the lobby voice channel
             for player in unreadied:
                 try:
@@ -251,7 +252,12 @@ class MatchCog(commands.Cog):
             elif team_method == 'captains':
                 team_one, team_two = await self.draft_teams(self.ready_message[category], members)
             else:
-                raise ValueError(self.bot.translate('team-method-not-valid').format(team_method))
+                raise ValueError(translate('team-method-not-valid').format(team_method))
+            
+            spect_ids = self.bot.db_helper.get_spect_users(category.id)
+            spect_members = [category.guild.get_member(member_id) for member_id in spect_ids]
+            spect_players = [await self.bot.api_helper.get_player(spect_id.id) for spect_id in spect_ids]
+            spect_steams = [spect_player['steam'] for spect_player in spect_players]
 
             await asyncio.sleep(1)
             # Get map pick
@@ -264,18 +270,18 @@ class MatchCog(commands.Cog):
             elif map_method == 'random':
                 map_pick = await self.random_map(mpool)
             else:
-                raise ValueError(self.bot.translate('map-method-not-valid').format(map_method))
+                raise ValueError(translate('map-method-not-valid').format(map_method))
 
             await asyncio.sleep(1)
-            burst_embed = self.bot.embed_template(description=self.bot.translate('fetching-server'))
+            burst_embed = self.bot.embed_template(description=translate('fetching-server'))
             await self.ready_message[category].edit(content='', embed=burst_embed)
 
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, map_pick.dev_name)
+                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, map_pick.dev_name)
             except aiohttp.ClientResponseError as e:
-                description = self.bot.translate('no-servers')
-                burst_embed = self.bot.embed_template(title=self.bot.translate('problem'), description=description)
+                description = translate('no-servers')
+                burst_embed = self.bot.embed_template(title=translate('problem'), description=description)
                 await self.ready_message[category].edit(embed=burst_embed)
                 print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
                 return False
@@ -286,16 +292,18 @@ class MatchCog(commands.Cog):
                 team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
 
                 match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
-                description = self.bot.translate('server-connect').format(match.connect_url, match.connect_command)
-                burst_embed = self.bot.embed_template(title=self.bot.translate('server-ready'), description=description)
+                description = translate('server-connect').format(match.connect_url, match.connect_command)
+                burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
-                burst_embed.set_author(name=f'{self.bot.translate("match")}{match.id}', url=match_url)
+                burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
-                burst_embed.add_field(name=f'__{self.bot.translate("team")} {team_one[0].display_name}__',
+                burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team1_profiles[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
-                burst_embed.add_field(name=f'__{self.bot.translate("team")} {team_two[0].display_name}__',
+                burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team2_profiles[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
-                burst_embed.set_footer(text=self.bot.translate('server-message-footer'))
+                burst_embed.add_field(name=f'__Spectators__',
+                                      value=''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))                                      
+                burst_embed.set_footer(text=translate('server-message-footer'))
 
             await self.ready_message[category].edit(embed=burst_embed)
             await self.create_match_channels(category, str(match.id), team_one, team_two)

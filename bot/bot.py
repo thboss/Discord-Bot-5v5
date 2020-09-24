@@ -41,9 +41,6 @@ class LeagueBot(commands.AutoShardedBot):
         self.db_pool = db_pool
         self.all_maps = []
 
-        with open('translations.json', 'r') as f:
-            self.translations = json.load(f)
-
         # Set constants
         self.description = 'An easy to use, fully automated system to set up and play CS:GO pickup games'
         self.color = 0x000000
@@ -73,12 +70,6 @@ class LeagueBot(commands.AutoShardedBot):
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
         self.add_cog(cogs.CommandsCog(self))
-
-    def translate(self, text):
-        try:
-            return self.translations[os.environ['DISCORD_LEAGUE_LANGUAGE']][text]
-        except (KeyError, ValueError):
-            return self.translations['en'][text]
 
     def embed_template(self, **kwargs):
         """ Implement the bot's default-style embed. """
