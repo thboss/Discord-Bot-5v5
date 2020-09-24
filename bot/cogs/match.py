@@ -254,10 +254,10 @@ class MatchCog(commands.Cog):
             else:
                 raise ValueError(translate('team-method-not-valid').format(team_method))
             
-            spect_ids = self.bot.db_helper.get_spect_users(category.id)
+            spect_ids = await self.bot.db_helper.get_spect_users(category.id)
             spect_members = [category.guild.get_member(member_id) for member_id in spect_ids]
-            spect_players = [await self.bot.api_helper.get_player(spect_id.id) for spect_id in spect_ids]
-            spect_steams = [spect_player['steam'] for spect_player in spect_players]
+            spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
+            spect_steams = [str(spect_player.steam) for spect_player in spect_players]
 
             await asyncio.sleep(1)
             # Get map pick
