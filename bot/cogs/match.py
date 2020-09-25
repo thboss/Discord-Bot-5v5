@@ -248,13 +248,13 @@ class MatchCog(commands.Cog):
                 team_one, team_two = await self.draft_teams(self.ready_message[category], members)
             else:
                 raise ValueError(translate('team-method-not-valid').format(team_method))
-            
+
+            await asyncio.sleep(1)
+
             spect_ids = await self.bot.db_helper.get_spect_users(category.id)
             spect_members = [category.guild.get_member(member_id) for member_id in spect_ids]
             spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
-
-            await asyncio.sleep(1)
             # Get map pick
             mpool = [m for m in self.bot.all_maps if await self.bot.get_league_data(category, m.dev_name)]
 

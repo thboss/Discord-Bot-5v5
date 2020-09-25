@@ -65,7 +65,8 @@ class LeagueBot(commands.AutoShardedBot):
         # Trigger typing before every command
         self.before_invoke(commands.Context.trigger_typing)
 
-        self.scheduler = AsyncIOScheduler().start()
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.start()
 
         # Add cogs
         self.add_cog(cogs.ConsoleCog(self))
