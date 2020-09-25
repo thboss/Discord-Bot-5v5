@@ -11,11 +11,6 @@ from bot.helpers.utils import translate
 from random import shuffle, choice
 from traceback import print_exception
 import sys
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-
-scheduler = AsyncIOScheduler()
-scheduler.start()
 
 
 class MatchCog(commands.Cog):
@@ -311,8 +306,8 @@ class MatchCog(commands.Cog):
             async def check_live():
                 if not await self.bot.api_helper.is_match_live(str(match.id)):
                     await self.delete_match_channels(category, str(match.id))
-                    scheduler.remove_job(str(match.id))
+                    self.bot.scheduler.remove_job(str(match.id))
 
-            scheduler.add_job(check_live, 'interval', seconds=10, id=str(match.id))
+            self.bot.scheduler.add_job(check_live, 'interval', seconds=10, id=str(match.id))
 
             return True  # Everyone readied up
