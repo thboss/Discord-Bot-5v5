@@ -1,4 +1,3 @@
-
 # commands.py
 
 from discord.ext import commands
@@ -234,7 +233,7 @@ class CommandsCog(commands.Cog):
                 prelobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_prelobby')
                 lobby = ctx.bot.get_channel(lobby_id)
                 prelobby = ctx.bot.get_channel(prelobby_id)
-                
+
                 for player in lobby.members:
                     await player.move_to(prelobby)
 
@@ -268,7 +267,8 @@ class CommandsCog(commands.Cog):
 
         embed = self.bot.embed_template()
         embed.add_field(name=f'__Spectators__',
-                        value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
+                        value='No spectators' if not spect_members else ''.join(
+                            f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
         await ctx.send(embed=embed)
 
     @commands.command(usage='addspect <mention>',
@@ -282,11 +282,11 @@ class CommandsCog(commands.Cog):
         try:
             spectator = ctx.message.mentions[0]
         except IndexError:
-            title=f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}addspect <mention>`'
+            title = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}addspect <mention>`'
         else:
             await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, spectator.id)
 
-            if not spectator.id in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
+            if spectator.id not in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
                 await self.bot.db_helper.insert_spect_users(ctx.channel.category_id, spectator.id)
                 title = f'{translate("added-spect").format(spectator.display_name)}'
             else:
@@ -306,7 +306,7 @@ class CommandsCog(commands.Cog):
         try:
             spectator = ctx.message.mentions[0]
         except IndexError:
-            title=f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}removespect <mention>`'
+            title = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}removespect <mention>`'
         else:
             await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, spectator.id)
 
@@ -341,8 +341,7 @@ class CommandsCog(commands.Cog):
                 title = translate('set-team-method').format(method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, team_method=method)
             else:
-                title = translate('team-valid-methods').format(valid_methods[0], valid_methods[1],
-                                                                        valid_methods[2])
+                title = translate('team-valid-methods').format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -370,8 +369,7 @@ class CommandsCog(commands.Cog):
                 title = translate('set-captains-method').format(method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, captain_method=method)
             else:
-                title = translate('captains-valid-method').format(valid_methods[0], valid_methods[1],
-                                                                           valid_methods[2])
+                title = translate('captains-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -398,8 +396,7 @@ class CommandsCog(commands.Cog):
                 title = translate('set-map-method').format(method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, map_method=method)
             else:
-                title = translate('map-valid-method').format(valid_methods[0], valid_methods[1],
-                                                                      valid_methods[2])
+                title = translate('map-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -412,7 +409,8 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_pool = [m.dev_name for m in self.bot.all_maps if await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
+        map_pool = [m.dev_name for m in self.bot.all_maps if
+                    await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
 
         if len(args) == 0:
             embed = self.bot.embed_template(title=translate('map-pool'))
@@ -471,7 +469,8 @@ class CommandsCog(commands.Cog):
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
             try:
-                if args[0] in self.match_cog.match_dict[ctx.channel.category] and await self.bot.api_helper.end_match(args[0]):
+                if args[0] in self.match_cog.match_dict[ctx.channel.category] and await self.bot.api_helper.end_match(
+                        args[0]):
                     msg = translate("match-cancelled").format(args[0])
                 else:
                     msg = translate("invalid-match-id")

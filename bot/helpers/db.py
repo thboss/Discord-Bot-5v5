@@ -4,7 +4,9 @@
 import os
 
 icons_dir = 'assets/maps/icons/'
-maps = [_map for _map in os.listdir(icons_dir) if _map.endswith('.png') and '-' in _map and os.stat(icons_dir + _map).st_size < 256000]
+maps = [_map for _map in os.listdir(icons_dir) if
+        _map.endswith('.png') and '-' in _map and os.stat(icons_dir + _map).st_size < 256000]
+
 
 class DBHelper:
     """ Class to contain database query wrapper functions. """
@@ -235,7 +237,7 @@ class DBHelper:
             async with connection.transaction():
                 deleted = await connection.fetch(statement, guild_id)
 
-        return self._get_record_attrs(deleted, 'user_id')        
+        return self._get_record_attrs(deleted, 'user_id')
 
     async def get_league(self, league_id):
         """ Get a guild's row from the leagues table. """

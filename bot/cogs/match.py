@@ -153,9 +153,9 @@ class MatchCog(commands.Cog):
 
         for num, member in enumerate(self.members[category], start=1):
             if member not in self.reactors[category]:
-                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n'
+                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n '
             else:
-                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n'
+                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n '
 
         embed.add_field(name=f":hourglass: __{translate('player')}__",
                         value='-------------------\n' + str_value)
@@ -176,7 +176,7 @@ class MatchCog(commands.Cog):
 
         self.reactors[reaction.message.channel.category].add(member)
         await self.ready_message[reaction.message.channel.category].edit(embed=self._ready_embed(reaction.message.channel.category))
-        if self.reactors[reaction.message.channel.category].issuperset(self.members[reaction.message.channel.category]):  # All queued members have reacted
+        if self.reactors[reaction.message.channel.category].issuperset(self.members[reaction.message.channel.category]):
             if self.future[reaction.message.channel.category] is not None:
                 self.future[reaction.message.channel.category].set_result(None)
 

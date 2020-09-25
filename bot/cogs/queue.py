@@ -53,14 +53,12 @@ class QueueCog(commands.Cog):
         after_text_channel = category.guild.get_channel(after_text_id)
 
         if after_msg is None:
-            self.last_queue_msgs[category] = await after_text_channel.send(
-                embed=embed)
+            self.last_queue_msgs[category] = await after_text_channel.send(embed=embed)
         else:
             try:
                 await after_msg.edit(embed=embed)
             except NotFound:
-                self.last_queue_msgs[category] = await after_text_channel.send(
-                    embed=embed)
+                self.last_queue_msgs[category] = await after_text_channel.send(embed=embed)
 
     async def _update_last_msg(self, category, embed):
         """ Send embed message and delete the last one sent. """
@@ -78,14 +76,12 @@ class QueueCog(commands.Cog):
         before_text_channel = category.guild.get_channel(before_text_id)
 
         if before_msg is None:
-            self.last_queue_msgs[category] = await before_text_channel.send(
-                embed=embed)
+            self.last_queue_msgs[category] = await before_text_channel.send(embed=embed)
         else:
             try:
                 await before_msg.edit(embed=embed)
             except NotFound:
-                self.last_queue_msgs[category] = await before_text_channel.send(
-                    embed=embed)
+                self.last_queue_msgs[category] = await before_text_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -127,7 +123,7 @@ class QueueCog(commands.Cog):
 
                 if member.id in queue_ids:  # Author already in queue
                     title = translate('already-in-queue').format(member.display_name)
-                if member.id in spect_ids:  # Player in the spectators
+                elif member.id in spect_ids:  # Player in the spectators
                     title = f'Unable to add **{member.display_name}**: in the spectators'
                 elif len(queue_ids) >= capacity:  # Queue full
                     title = translate('queue-is-full').format(member.display_name)
@@ -152,7 +148,7 @@ class QueueCog(commands.Cog):
 
                         if all_readied:
                             await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
-   
+
                         self.block_lobby[after_lobby.category] = False
                         await after_lobby.set_permissions(pug_role, connect=True)
                         title = translate('players-in-queue')
