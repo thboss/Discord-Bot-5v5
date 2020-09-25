@@ -191,16 +191,6 @@ class CommandsCog(commands.Cog):
         # Update queue display message
         await self.queue_cog.update_last_msg(ctx.channel.category, embed)
 
-    @remove.error
-    @empty.error
-    async def remove_error(self, ctx, error):
-        """ Respond to a permissions error with an explanation message. """
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.trigger_typing()
-            missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=translate('required-perm').format(missing_perm))
-            await ctx.send(embed=embed)
-
     @commands.command(usage='cap [new capacity]',
                       brief='Set the capacity of the queue (Must have admin perms)')
     @commands.has_permissions(administrator=True)
@@ -242,20 +232,7 @@ class CommandsCog(commands.Cog):
 
         await ctx.send(embed=self.bot.embed_template(title=msg))
 
-    @cap.error
-    @create.error
-    @delete.error
-    async def cap_error(self, ctx, error):
-        """ Respond to a permissions error with an explanation message. """
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.trigger_typing()
-            missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=translate('required-perm').format(missing_perm))
-            await ctx.send(embed=embed)
-
-    @commands.command(usage='spectators',
-                      brief='View the match spectators (Must have admin perms)')
-    @commands.has_permissions(administrator=True)
+    @commands.command(usage='spectators', brief='View the match spectators')
     async def spectators(self, ctx):
         """ View the spectators. """
         if not await self.bot.isValidChannel(ctx):
@@ -480,19 +457,6 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)
 
-    @teams.error
-    @captains.error
-    @maps.error
-    @end.error
-    async def config_error(self, ctx, error):
-        """ Respond to a permissions error with an explanation message. """
-        if isinstance(error, commands.MissingPermissions):
-            await ctx.trigger_typing()
-            missing_perm = error.missing_perms[0].replace('_', ' ')
-            title = translate('cannot-set').format(ctx.command.name, missing_perm)
-            embed = self.bot.embed_template(title=title)
-            await ctx.send(embed=embed)
-
     @commands.command(brief='See your stats')
     async def stats(self, ctx):
         """ Send an embed containing stats data parsed from the player object returned from the API. """
@@ -564,3 +528,22 @@ class CommandsCog(commands.Cog):
         title = f'__{translate("server-leaderboard")}__'
         embed = self.bot.embed_template(title=title, description=description)
         await ctx.send(embed=embed)
+
+    @remove.error
+    @empty.error
+    @cap.error
+    @addspect.error
+    @removespect.error
+    @create.error
+    @delete.error
+    @teams.error
+    @captains.error
+    @maps.error
+    @end.error
+    async def config_error(self, ctx, error):
+        """ Respond to a permissions error with an explanation message. """
+        if isinstance(error, commands.MissingPermissions):
+            await ctx.trigger_typing()
+            missing_perm = error.missing_perms[0].replace('_', ' ')
+            embed = self.bot.embed_template(title=translate('required-perm').format(missing_perm))
+            await ctx.send(embed=embed)
