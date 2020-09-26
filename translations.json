@@ -108,6 +108,7 @@
         "removed-spect":        "Removed **{}** from the spectators"
     },
     "ru": {
+        "create-league":        "Лига **{}** успешно создана",
         "queue-is-empty":       "Очередь пустая...",
         "receive-notification": "Игроки получат уведомление, когда очередь заполнится",
         "discord-not-linked":   "{} твой дискорд не зарегистрирован. Пропиши q!link",
@@ -124,14 +125,11 @@
         "mention-to-remove":    "Пропишите ник игрока через @ чтобы убрать его из очереди",
         "removed-not-in-queue": "**{}** не в очереди",
         "queue-emptied":        "Очередь очищена",
-        "remove-perm":          "Не могу кикать без **{}** разрешения!",
-        "current-capacity":     "Вместимость очереди сейчас **{}**",
-        "capacity-not-integer": "{} не число",
         "capacity-already":     "Вместимость уже **{}**",
-        "capacity-out-range":   "Вместимость должна быть в пределах этих значений (2-100)",
+        "capacity-out-range":   "Вместимость должна быть числом (2-100)",
         "set-capacity":         "Вместимость задана на **{}**",
-        "queue-emptied-footer": "Очередь очищена, из-за смены вместимости",
-        "change-capacity-perm": "Не могу изменить вместимость без разрешения **{}**!",
+        "queue-emptied-footer": "Очередь была очищена из-за смены Вместимости",
+        "required-perm":        "Использование этой команды требует **{}** разрешения!",
         "team-pick-footer":     "Нажмите на любое из чисел ниже, чтобы выбрать соответствующего участника",
         "empty":                "Пусто",
         "players-left":         "Игроков осталось",
@@ -209,11 +207,13 @@
         "nobody-ranked":        "Никого нету в статистике на сервере!",
         "server-leaderboard":   "Статистка CS:GO League Server",
         "invalid-usage":        "Неправильное использование",
-        "added-alerts":         "Бот теперь будет уведомлять {}",
-        "removed-alerts":       "Бот теперь не будет уведомлять {}",
         "player":               "Игроки",
         "invalid-match-id":     "Неверный Match ID",
-        "match-cancelled":      "Match ID **{}** отменен"
+        "match-cancelled":      "Match ID **{}** отменен",
+        "added-spect":          "Игрок **{}** добавлен в наблюдатели",
+        "already-spect":        "**{}** уже в наблюдателях!",
+        "not-in-spect":         "**{}** не является наблюдателем!",
+        "removed-spect":        "Игрок **{}** убран из наблюдателей"
     },
     "tr": {
         "queue-is-empty":       "Sıra boş...",
