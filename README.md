@@ -101,6 +101,10 @@
 
 `q!teams <random|autobalance|captains>` **-** Set the team creation method <br>
 
+`q!addspect` **-** Add player to the spectators <br>
+
+`q!removespect` **-** Remove player from the spectators <br>
+
 `q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
 
 `q!maps <random|vote|captains>` **-** Set the map selection method <br>
@@ -121,3 +125,5 @@
 `q!leaders` **-** See the top players in the server <br>
 
 `q!check` **-** Check if the player has been linked his account and give him role if so <br>
+
+`q!spectators` **-** View the spectators <br>
