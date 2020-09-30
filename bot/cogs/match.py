@@ -39,8 +39,9 @@ class MatchCog(commands.Cog):
             raise ValueError(translate('members-must-even'))
 
         # Get players and sort by RankMe score
-        members_dict = dict(
-            zip(await self.bot.api_helper.get_players([member.id for member in member_ids]), member_ids))
+        players = await self.bot.api_helper.get_players([member.id for member in member_ids])
+        players.sort(key=lambda x: member_ids.index(x['discord']))
+        members_dict = dict(zip(players, member_ids))
         players = list(members_dict.keys())
         players.sort(key=lambda x: x.score)
 
