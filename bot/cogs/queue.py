@@ -22,7 +22,12 @@ class QueueCog(commands.Cog):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(category.id)
         capacity = await self.bot.get_league_data(category, 'capacity')
-        profiles = [await self.bot.api_helper.get_player(member_id) for member_id in queued_ids]
+        
+        if len(queued_ids) > 1:
+            players = await self.bot.api_helper.get_players(queued_ids)
+            players.sort(key=lambda x: queued_ids.index(x.discord))
+        elif queued_ids:
+            players = [await self.bot.api_helper.get_player(queued_ids[0])]
 
         if title:
             title += f' ({len(queued_ids)}/{capacity})'
@@ -31,7 +36,7 @@ class QueueCog(commands.Cog):
             queue_str = f'_{translate("queue-is-empty")}_'
         else:  # members still in queue
             queue_str = ''.join(
-                f'{num}. [{category.guild.get_member(member_id).display_name}]({profiles[num - 1].league_profile})\n'
+                f'{num}. [{category.guild.get_member(member_id).display_name}]({players[num - 1].league_profile})\n'
                 for num, member_id in enumerate(queued_ids, start=1))
 
         embed = self.bot.embed_template(title=title, description=queue_str)

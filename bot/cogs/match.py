@@ -32,16 +32,17 @@ class MatchCog(commands.Cog):
         teams = await menu.draft()
         return teams[0], teams[1]
 
-    async def autobalance_teams(self, member_ids):
+    async def autobalance_teams(self, members):
         """ Balance teams based on players' RankMe score. """
         # Only balance teams with even amounts of players
-        if len(member_ids) % 2 != 0:
+        if len(members) % 2 != 0:
             raise ValueError(translate('members-must-even'))
-
+        
+        member_ids = [member.id for member in members]
         # Get players and sort by RankMe score
-        players = await self.bot.api_helper.get_players([member.id for member in member_ids])
-        players.sort(key=lambda x: member_ids.index(x['discord']))
-        members_dict = dict(zip(players, member_ids))
+        players = await self.bot.api_helper.get_players(member_ids)
+        players.sort(key=lambda x: member_ids.index(x.discord))
+        members_dict = dict(zip(players, members))
         players = list(members_dict.keys())
         players.sort(key=lambda x: x.score)
 
@@ -184,10 +185,14 @@ class MatchCog(commands.Cog):
     async def start_match(self, category, members):
         """ Ready all the members up and start a match. """
         queue_cog = self.bot.get_cog('QueueCog')
+        queue_ids = [member.id for member in members]
+        players = await self.bot.api_helper.get_players(queue_ids)
+        players.sort(key=lambda x: queue_ids.index(x.discord))
+
         self.members[category] = members
         self.reactors[category] = set()  # Track who has readied up
         self.future[category] = self.bot.loop.create_future()
-        self.queue_profiles[category] = [await self.bot.api_helper.get_player(member.id) for member in members]
+        self.queue_profiles[category] = players
 
         member_mentions = [member.mention for member in members]
         burst_embed = self._ready_embed(category)
@@ -284,8 +289,19 @@ class MatchCog(commands.Cog):
             else:
                 await asyncio.sleep(3)
 
-                team1_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_one]
-                team2_profiles = [await self.bot.api_helper.get_player(member.id) for member in team_two]
+                team1_ids = [member.id for member in team_one]
+                if len(team1_ids) > 1:
+                    team1_players = await self.bot.api_helper.get_players(team1_ids)
+                    team1_players.sort(key=lambda x: team1_ids.index(x.discord))
+                else:
+                    team1_players = [await self.bot.api_helper.get_player(team1_ids[0])]
+
+                team2_ids = [member.id for member in team_two]
+                if len(team2_ids) > 1:
+                    team2_players = await self.bot.api_helper.get_players(team2_ids)
+                    team2_players.sort(key=lambda x: team2_ids.index(x.discord))
+                else:
+                    team2_players = [await self.bot.api_helper.get_player(team2_ids[0])]
 
                 match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
                 description = translate('server-connect').format(match.connect_url, match.connect_command)
@@ -294,9 +310,9 @@ class MatchCog(commands.Cog):
                 burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
                 burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
-                                      value=''.join(f'{num}. [{member.display_name}]({team1_profiles[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
+                                      value=''.join(f'{num}. [{member.display_name}]({team1_players[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
                 burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
-                                      value=''.join(f'{num}. [{member.display_name}]({team2_profiles[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
+                                      value=''.join(f'{num}. [{member.display_name}]({team2_players[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
                 burst_embed.add_field(name=f'__Spectators__',
                                       value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
                 burst_embed.set_footer(text=translate('server-message-footer'))
