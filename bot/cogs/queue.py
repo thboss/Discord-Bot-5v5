@@ -111,7 +111,7 @@ class QueueCog(commands.Cog):
                 return
 
             if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
-                title = translate('account-not-linked').format(member.display_name)
+                title = translate('account-not-linked', member.display_name)
             else:  # Message author is linked
                 awaitables = [
                     self.bot.api_helper.get_player(member.id),
@@ -127,19 +127,19 @@ class QueueCog(commands.Cog):
                 spect_ids = results[4]
 
                 if member.id in queue_ids:  # Author already in queue
-                    title = translate('already-in-queue').format(member.display_name)
+                    title = translate('already-in-queue', member.display_name)
                 elif member.id in spect_ids:  # Player in the spectators
                     title = f'Unable to add **{member.display_name}**: in the spectators'
                 elif len(queue_ids) >= capacity:  # Queue full
-                    title = translate('queue-is-full').format(member.display_name)
+                    title = translate('queue-is-full', member.display_name)
                 elif not player:  # ApiHelper couldn't get player
-                    title = translate('cannot-verify-match').format(member.display_name)
+                    title = translate('cannot-verify-match', member.display_name)
                 elif player.in_match:  # member is already in a match
-                    title = translate('already-in-match').format(member.display_name)
+                    title = translate('already-in-match', member.display_name)
                 else:  # member can be added
                     await self.bot.db_helper.insert_queued_users(after_lobby.category_id, member.id)
                     queue_ids += [member.id]
-                    title = translate('added-to-queue').format(member.display_name)
+                    title = translate('added-to-queue', member.display_name)
 
                     # Check and burst queue if full
                     if len(queue_ids) == capacity:
@@ -172,9 +172,9 @@ class QueueCog(commands.Cog):
             removed = await self.bot.db_helper.delete_queued_users(before_lobby.category_id, member.id)
 
             if member.id in removed:
-                title = translate('removed-from-queue').format(member.display_name)
+                title = translate('removed-from-queue', member.display_name)
             else:
-                title = translate('not-in-queue').format(member.display_name)
+                title = translate('not-in-queue', member.display_name)
 
             embed = await self.queue_embed(before_lobby.category, title)
             # Update queue display message

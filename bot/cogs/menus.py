@@ -109,15 +109,15 @@ class TeamDraftMenu(discord.Message):
         """ Process a team captain's player pick, assuming the picker is in the team draft. """
         # Get picking team
         if picker == pickee:
-            raise PickError(translate('picker-pick-self').format(picker.display_name))
+            raise PickError(translate('picker-pick-self', picker.display_name))
         elif not self.teams[0]:
             picking_team = self.teams[0]
             self.members_left.remove(picker)
             picking_team.append(picker)
         elif self.teams[1] == [] and picker == self.teams[0][0]:
-            raise PickError(translate('picker-not-turn').format(picker.display_name))
+            raise PickError(translate('picker-not-turn', picker.display_name))
         elif self.teams[1] == [] and picker in self.teams[0]:
-            raise PickError(translate('picker-not-captain').format(picker.display_name))
+            raise PickError(translate('picker-not-captain', picker.display_name))
         elif not self.teams[1]:
             picking_team = self.teams[1]
             self.members_left.remove(picker)
@@ -127,15 +127,15 @@ class TeamDraftMenu(discord.Message):
         elif picker == self.teams[1][0]:
             picking_team = self.teams[1]
         else:
-            raise PickError(translate('picker-not-captain').format(picker.display_name))
+            raise PickError(translate('picker-not-captain', picker.display_name))
 
         # Check if it's picker's turn
         if picker != self._active_picker:
-            raise PickError(translate('picker-not-turn').format(picker.display_name))
+            raise PickError(translate('picker-not-turn', picker.display_name))
 
         # Prevent picks when team is full
         if len(picking_team) > len(self.members) // 2:
-            raise PickError(translate('team-full').format(picker.display_name))
+            raise PickError(translate('team-full', picker.display_name))
 
         self.members_left.remove(pickee)
         picking_team.append(pickee)
@@ -166,7 +166,7 @@ class TeamDraftMenu(discord.Message):
         except PickError as e:  # Player not picked
             title = e.message
         else:  # Player picked 
-            title = translate('team-picked').format(member.display_name, pick.display_name)
+            title = translate('team-picked', member.display_name, pick.display_name)
 
         if len(self.members_left) == 1:
             fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
@@ -311,7 +311,7 @@ class MapDraftMenu(discord.Message):
 
             return
 
-        await self._update_menu(translate('user-banned-map').format(member.display_name, map_ban.name))
+        await self._update_menu(translate('user-banned-map', member.display_name, map_ban.name))
 
     async def draft(self, pool, captain_1, captain_2):
         """ Start the team draft and return the teams after it's finished. """

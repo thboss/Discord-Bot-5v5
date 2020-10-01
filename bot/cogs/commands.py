@@ -75,14 +75,14 @@ class CommandsCog(commands.Cog):
 
         if is_linked:
             player = await self.bot.api_helper.get_player(ctx.author.id)
-            title = translate('already-linked').format(player.steam_profile)
+            title = translate('already-linked', player.steam_profile)
         else:
             link = await self.bot.api_helper.generate_link_url(ctx.author.id)
 
             if link:
                 # Send the author a DM containing this link
                 try:
-                    await ctx.author.send(translate('dm-link').format(link))
+                    await ctx.author.send(translate('dm-link', link))
                     title = translate('link-sent')
                 except:
                     title = translate('blocked-dm')
@@ -146,9 +146,9 @@ class CommandsCog(commands.Cog):
             removed = await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, removee.id)
 
             if removee.id in removed:
-                title = translate('removed-from-queue').format(removee.display_name)
+                title = translate('removed-from-queue', removee.display_name)
             else:
-                title = translate('removed-not-in-queue').format(removee.display_name)
+                title = translate('removed-not-in-queue', removee.display_name)
 
             embed = await self.queue_cog.queue_embed(ctx.channel.category, title)
 
@@ -207,7 +207,7 @@ class CommandsCog(commands.Cog):
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}cap <number>`'
         else:
             if new_cap == capacity:
-                msg = translate('capacity-already').format(capacity)
+                msg = translate('capacity-already', capacity)
             elif new_cap < 2 or new_cap > 100:
                 msg = translate('capacity-out-range')
             else:
@@ -217,7 +217,7 @@ class CommandsCog(commands.Cog):
                 embed = await self.queue_cog.queue_embed(ctx.channel.category, translate('queue-emptied'))
                 embed.set_footer(text=translate('queue-emptied-footer'))
                 await self.queue_cog.update_last_msg(ctx.channel.category, embed)
-                msg = translate('set-capacity').format(new_cap)
+                msg = translate('set-capacity', new_cap)
 
                 lobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
                 prelobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_prelobby')
@@ -265,9 +265,9 @@ class CommandsCog(commands.Cog):
 
             if spectator.id not in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
                 await self.bot.db_helper.insert_spect_users(ctx.channel.category_id, spectator.id)
-                title = f'{translate("added-spect").format(spectator.display_name)}'
+                title = f'{translate("added-spect", spectator.display_name)}'
             else:
-                title = f'{translate("already-spect").format(spectator.display_name)}'
+                title = f'{translate("already-spect", spectator.display_name)}'
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -289,9 +289,9 @@ class CommandsCog(commands.Cog):
 
             if spectator.id in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
                 await self.bot.db_helper.delete_spect_users(ctx.channel.category_id, spectator.id)
-                title = f'{translate("removed-spect").format(spectator.display_name)}'
+                title = f'{translate("removed-spect", spectator.display_name)}'
             else:
-                title = f'{translate("not-in-spect").format(spectator.display_name)}'
+                title = f'{translate("not-in-spect", spectator.display_name)}'
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -308,17 +308,17 @@ class CommandsCog(commands.Cog):
         valid_methods = ['captains', 'autobalance', 'random']
 
         if method is None:
-            title = translate('team-method').format(team_method)
+            title = translate('team-method', team_method)
         else:
             method = method.lower()
 
             if method == team_method:
-                title = translate('team-method-already').format(team_method)
+                title = translate('team-method-already', team_method)
             elif method in valid_methods:
-                title = translate('set-team-method').format(method)
+                title = translate('set-team-method', method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, team_method=method)
             else:
-                title = translate('team-valid-methods').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = translate('team-valid-methods', valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -336,17 +336,17 @@ class CommandsCog(commands.Cog):
         valid_methods = ['volunteer', 'rank', 'random']
 
         if method is None:
-            title = translate('captains-method').format(captain_method)
+            title = translate('captains-method', captain_method)
         else:
             method = method.lower()
 
             if method == captain_method:
-                title = translate('captains-method-already').format(captain_method)
+                title = translate('captains-method-already', captain_method)
             elif method in valid_methods:
-                title = translate('set-captains-method').format(method)
+                title = translate('set-captains-method', method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, captain_method=method)
             else:
-                title = translate('captains-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = translate('captains-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -363,17 +363,17 @@ class CommandsCog(commands.Cog):
         valid_methods = ['captains', 'vote', 'random']
 
         if method is None:
-            title = translate('map-method').format(map_method)
+            title = translate('map-method', map_method)
         else:
             method = method.lower()
 
             if method == map_method:
-                title = translate('map-method-already').format(map_method)
+                title = translate('map-method-already', map_method)
             elif method in valid_methods:
-                title = translate('set-map-method').format(method)
+                title = translate('set-map-method', method)
                 await self.bot.db_helper.update_league(ctx.channel.category_id, map_method=method)
             else:
-                title = translate('map-valid-method').format(valid_methods[0], valid_methods[1], valid_methods[2])
+                title = translate('map-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
@@ -400,18 +400,18 @@ class CommandsCog(commands.Cog):
                 map_obj = next((m for m in self.bot.all_maps if m.dev_name == map_name), None)
 
                 if map_obj is None:
-                    description += '\u2022 ' + translate('could-not-interpret').format(arg)
+                    description += '\u2022 ' + translate('could-not-interpret', arg)
                     any_wrong_arg = True
                     continue
 
                 if arg.startswith('+'):  # Add map
                     if map_name not in map_pool:
                         map_pool.append(map_name)
-                        description += '\u2022 ' + translate('added-map').format(map_name)
+                        description += '\u2022 ' + translate('added-map', map_name)
                 elif arg.startswith('-'):  # Remove map
                     if map_name in map_pool:
                         map_pool.remove(map_name)
-                        description += '\u2022 ' + translate('removed-map').format(map_name)
+                        description += '\u2022 ' + translate('removed-map', map_name)
 
             if len(map_pool) < 3:
                 description = translate('map-pool-fewer-3')
@@ -448,7 +448,7 @@ class CommandsCog(commands.Cog):
             try:
                 if args[0] in self.match_cog.match_dict[ctx.channel.category] and await self.bot.api_helper.end_match(
                         args[0]):
-                    msg = translate("match-cancelled").format(args[0])
+                    msg = translate("match-cancelled", args[0])
                 else:
                     msg = translate("invalid-match-id")
             except KeyError:
@@ -482,7 +482,7 @@ class CommandsCog(commands.Cog):
             embed = self.bot.embed_template(description=description)
             embed.set_author(name=user.display_name, url=player.league_profile, icon_url=user.avatar_url_as(size=128))
         else:
-            title = translate("cannot-get-stats").format(ctx.author.display_name)
+            title = translate("cannot-get-stats", ctx.author.display_name)
             embed = self.bot.embed_template(title=title)
 
         await ctx.send(embed=embed)
@@ -545,5 +545,5 @@ class CommandsCog(commands.Cog):
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
-            embed = self.bot.embed_template(title=translate('required-perm').format(missing_perm))
+            embed = self.bot.embed_template(title=translate('required-perm', missing_perm))
             await ctx.send(embed=embed)

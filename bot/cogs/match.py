@@ -150,7 +150,7 @@ class MatchCog(commands.Cog):
 
     def _ready_embed(self, category):
         str_value = ''
-        description = translate('react-ready').format('✅')
+        description = translate('react-ready', '✅')
         embed = self.bot.embed_template(title=translate('queue-filled'), description=description)
 
         for num, member in enumerate(self.members[category], start=1):
@@ -253,7 +253,7 @@ class MatchCog(commands.Cog):
             elif team_method == 'captains':
                 team_one, team_two = await self.draft_teams(self.ready_message[category], members)
             else:
-                raise ValueError(translate('team-method-not-valid').format(team_method))
+                raise ValueError(translate('team-method-not-valid', team_method))
 
             await asyncio.sleep(1)
 
@@ -271,7 +271,7 @@ class MatchCog(commands.Cog):
             elif map_method == 'random':
                 map_pick = await self.random_map(mpool)
             else:
-                raise ValueError(translate('map-method-not-valid').format(map_method))
+                raise ValueError(translate('map-method-not-valid', map_method))
 
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=translate('fetching-server'))
@@ -304,7 +304,7 @@ class MatchCog(commands.Cog):
                     team2_players = [await self.bot.api_helper.get_player(team2_ids[0])]
 
                 match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
-                description = translate('server-connect').format(match.connect_url, match.connect_command)
+                description = translate('server-connect', match.connect_url, match.connect_command)
                 burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
                 burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
