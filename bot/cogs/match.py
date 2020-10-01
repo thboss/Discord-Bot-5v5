@@ -38,11 +38,8 @@ class MatchCog(commands.Cog):
         if len(members) % 2 != 0:
             raise ValueError(translate('members-must-even'))
         
-        member_ids = [member.id for member in members]
         # Get players and sort by RankMe score
-        players = await self.bot.api_helper.get_players(member_ids)
-        players.sort(key=lambda x: member_ids.index(x.discord))
-        members_dict = dict(zip(players, members))
+        members_dict = dict(zip(await self.bot.api_helper.get_players([member.id for member in members]), members))
         players = list(members_dict.keys())
         players.sort(key=lambda x: x.score)
 
@@ -185,14 +182,10 @@ class MatchCog(commands.Cog):
     async def start_match(self, category, members):
         """ Ready all the members up and start a match. """
         queue_cog = self.bot.get_cog('QueueCog')
-        queue_ids = [member.id for member in members]
-        players = await self.bot.api_helper.get_players(queue_ids)
-        players.sort(key=lambda x: queue_ids.index(x.discord))
-
         self.members[category] = members
         self.reactors[category] = set()  # Track who has readied up
         self.future[category] = self.bot.loop.create_future()
-        self.queue_profiles[category] = players
+        self.queue_profiles[category] = await self.bot.api_helper.get_players([member.id for member in members])
 
         member_mentions = [member.mention for member in members]
         burst_embed = self._ready_embed(category)
@@ -292,14 +285,12 @@ class MatchCog(commands.Cog):
                 team1_ids = [member.id for member in team_one]
                 if len(team1_ids) > 1:
                     team1_players = await self.bot.api_helper.get_players(team1_ids)
-                    team1_players.sort(key=lambda x: team1_ids.index(x.discord))
                 else:
                     team1_players = [await self.bot.api_helper.get_player(team1_ids[0])]
 
                 team2_ids = [member.id for member in team_two]
                 if len(team2_ids) > 1:
                     team2_players = await self.bot.api_helper.get_players(team2_ids)
-                    team2_players.sort(key=lambda x: team2_ids.index(x.discord))
                 else:
                     team2_players = [await self.bot.api_helper.get_player(team2_ids[0])]
 

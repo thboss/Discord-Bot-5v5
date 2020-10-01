@@ -4,7 +4,7 @@
         "queue-is-empty":       "The queue is empty...",
         "receive-notification": "Players will receive a notification when the queue fills up",
         "discord-not-linked":   "**Sorry! Your Discord is not linked with Steam account! type `q!link` to link it**",
-        "discord-get-role":     "**Your Discord has been verified :white_check_mark: You can join the lobby**",
+        "discord-get-role":     "**Your Discord has been verified :white_check_mark:**",
         "account-not-linked":   "Unable to add **{}**: Account is not linked",
         "players-in-queue":     "Current players in the queue",
         "already-in-queue":     "Unable to add **{}**: Already in the queue",

@@ -25,8 +25,7 @@ class QueueCog(commands.Cog):
         
         if len(queued_ids) > 1:
             players = await self.bot.api_helper.get_players(queued_ids)
-            players.sort(key=lambda x: queued_ids.index(x.discord))
-        elif queued_ids:
+        elif len(queued_ids) == 1:
             players = [await self.bot.api_helper.get_player(queued_ids[0])]
 
         if title:

@@ -246,6 +246,7 @@ class ApiHelper:
 
         async with self.session.post(url=url, headers=self.headers, json=discord_ids) as resp:
             players = await resp.json()
+            players.sort(key=lambda x: member_ids.index(int(x['discord'])))
             return [Player(player_data, self.base_url) for player_data in players]
 
     async def end_match(self, match_id):
