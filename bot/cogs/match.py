@@ -282,17 +282,15 @@ class MatchCog(commands.Cog):
             else:
                 await asyncio.sleep(3)
 
-                team1_ids = [member.id for member in team_one]
-                if len(team1_ids) > 1:
-                    team1_players = await self.bot.api_helper.get_players(team1_ids)
+                if len(team_one) > 1:
+                    team1_players = await self.bot.api_helper.get_players([member.id for member in team_one])
                 else:
-                    team1_players = [await self.bot.api_helper.get_player(team1_ids[0])]
+                    team1_players = [await self.bot.api_helper.get_player(team_one[0].id)]
 
-                team2_ids = [member.id for member in team_two]
-                if len(team2_ids) > 1:
-                    team2_players = await self.bot.api_helper.get_players(team2_ids)
+                if len(team_two) > 1:
+                    team2_players = await self.bot.api_helper.get_players([member.id for member in team_two])
                 else:
-                    team2_players = [await self.bot.api_helper.get_player(team2_ids[0])]
+                    team2_players = [await self.bot.api_helper.get_player(team_two[0].id)]
 
                 match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
                 description = translate('server-connect', match.connect_url, match.connect_command)
@@ -300,6 +298,7 @@ class MatchCog(commands.Cog):
 
                 burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
+                
                 burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team1_players[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
                 burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
