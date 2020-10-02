@@ -16,6 +16,10 @@ import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
+_CWD = os.path.dirname(os.path.abspath(__file__))
+INTENTS_JSON = os.path.join(_CWD, 'intents.json')
+
+
 class Map:
     """ A group of attributes representing a map. """
 
@@ -33,7 +37,11 @@ class LeagueBot(commands.AutoShardedBot):
     def __init__(self, discord_token, api_base_url, api_key, db_pool):
         """ Set attributes and configure bot. """
         # Call parent init
-        super().__init__(command_prefix=('q!', 'Q!'), case_insensitive=True)
+        with open(INTENTS_JSON) as f:
+            intents_attrs = json.load(f)
+
+        intents = discord.Intents(**intents_attrs)
+        super().__init__(command_prefix=('q!', 'Q!'), case_insensitive=True, intents=intents)
 
         # Set argument attributes
         self.discord_token = discord_token
