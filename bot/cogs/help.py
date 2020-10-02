@@ -3,6 +3,8 @@
 from discord.ext import commands
 import Levenshtein as lev
 
+from bot.helpers.utils import translate
+
 GITHUB = 'https://github.com/thboss/Discord-Bot-5v5'  # TODO: Use git API to get link to repo?
 SERVER_INV = 'https://discord.gg/b5MhANU'
 
@@ -55,7 +57,7 @@ class HelpCog(commands.Cog):
             embed = self.bot.embed_template(title=embed_title)
             await ctx.send(embed=embed)
 
-    @commands.command(brief='Display the help menu')
+    @commands.command(brief=translate('command-help-brief'))
     async def help(self, ctx):
         """ Generate and send help embed based on the bot's commands. """
         if not await self.bot.isValidChannel(ctx):
@@ -64,14 +66,14 @@ class HelpCog(commands.Cog):
         embed = self.help_embed('__CS:GO League Bot Commands__')
         await ctx.send(embed=embed)
 
-    @commands.command(brief='Display basic info about this bot')
+    @commands.command(brief=translate('command-about-brief'))
     async def about(self, ctx):
         """ Display the info embed. """
         if not await self.bot.isValidChannel(ctx):
             return
 
         description = (
-            '_CS:GO PUGs made easy so you can just play. End-to-end support from Discord to matches._\n\n'
+            f'_{translate("bot-description")}_\n\n'
             f'Join the [support server]({SERVER_INV})\n'
             f'Source code can be found on [GitHub]({GITHUB})'
         )

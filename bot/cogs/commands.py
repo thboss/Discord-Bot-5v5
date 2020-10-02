@@ -17,7 +17,7 @@ class CommandsCog(commands.Cog):
         self.queue_cog = self.bot.get_cog('QueueCog')
 
     @commands.command(usage='create <league name>',
-                      brief='Create league (Must have admin perms)')
+                      brief=translate('command-create-brief'))
     @commands.has_permissions(administrator=True)
     async def create(self, ctx, *args):
         args = ' '.join(arg for arg in args)
@@ -48,7 +48,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='delete',
-                      brief='Delete league (Must have admin perms)')
+                      brief=translate('command-delete-brief'))
     @commands.has_permissions(administrator=True)
     async def delete(self, ctx):
         if not await self.bot.isValidChannel(ctx):
@@ -65,7 +65,7 @@ class CommandsCog(commands.Cog):
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()
 
-    @commands.command(brief='Link a player on the backend')
+    @commands.command(brief=translate('command-link-brief'))
     async def link(self, ctx):
         """ Link a player by sending them a link to sign in with steam on the backend. """
         if not await self.bot.isValidChannel(ctx):
@@ -92,7 +92,7 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(description=title)
         await ctx.send(content=ctx.author.mention, embed=embed)
 
-    @commands.command(brief='UnLink a player on the backend')
+    @commands.command(brief=translate('command-unlink-brief'))
     async def unlink(self, ctx):
         """ Unlink a player by delete him on the backend. """
         if not await self.bot.isValidChannel(ctx):
@@ -112,7 +112,7 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(content=ctx.author.mention, embed=embed)
 
-    @commands.command(brief='Check if account is linked and give linked role')
+    @commands.command(brief=translate('command-check-brief'))
     async def check(self, ctx):
         if not await self.bot.isValidChannel(ctx):
             return
@@ -130,7 +130,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(content=ctx.author.mention, embed=embed)
 
     @commands.command(usage='remove <member mention>',
-                      brief='Remove the mentioned member from the queue (must have server kick perms)')
+                      brief=translate('command-remove-brief'))
     @commands.has_permissions(kick_members=True)
     async def remove(self, ctx):
         """ Remove the specified member from the queue. """
@@ -165,7 +165,7 @@ class CommandsCog(commands.Cog):
             # Update queue display message
             await self.queue_cog.update_last_msg(ctx.channel.category, embed)
 
-    @commands.command(brief='Empty the queue (must have server kick perms)')
+    @commands.command(brief=translate('command-empty-brief'))
     @commands.has_permissions(kick_members=True)
     async def empty(self, ctx):
         """ Reset the league queue list to empty. """
@@ -192,7 +192,7 @@ class CommandsCog(commands.Cog):
         await self.queue_cog.update_last_msg(ctx.channel.category, embed)
 
     @commands.command(usage='cap [new capacity]',
-                      brief='Set the capacity of the queue (Must have admin perms)')
+                      brief=translate('command-cap-brief'))
     @commands.has_permissions(administrator=True)
     async def cap(self, ctx, *args):
         """ Set the queue capacity. """
@@ -232,7 +232,7 @@ class CommandsCog(commands.Cog):
 
         await ctx.send(embed=self.bot.embed_template(title=msg))
 
-    @commands.command(usage='spectators', brief='View the match spectators')
+    @commands.command(usage='spectators', brief=translate('command-spectators-brief'))
     async def spectators(self, ctx):
         """ View the spectators. """
         if not await self.bot.isValidChannel(ctx):
@@ -249,7 +249,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='addspect <mention>',
-                      brief='Add user to the match spectators (Must have admin perms)')
+                      brief=translate('command-addspect-brief'))
     @commands.has_permissions(administrator=True)
     async def addspect(self, ctx):
         """ Add the specified member to the spectators. """
@@ -273,7 +273,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='removespect <mention>',
-                      brief='Add user to the match spectators (Must have admin perms)')
+                      brief=translate('command-removespect-brief'))
     @commands.has_permissions(administrator=True)
     async def removespect(self, ctx):
         """ Remove the specified member from the spectators. """
@@ -297,7 +297,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='teams {captains|autobalance|random}',
-                      brief='Set or view the team creation method (Must have admin perms)')
+                      brief=translate('command-teams-brief'))
     @commands.has_permissions(administrator=True)
     async def teams(self, ctx, method=None):
         """ Set or display the method by which teams are created. """
@@ -324,7 +324,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='captains {volunteer|rank|random}',
-                      brief='Set or view the captain selection method (Must have admin perms)')
+                      brief=translate('command-captains-brief'))
     @commands.has_permissions(administrator=True)
     async def captains(self, ctx, method=None):
         """ Set or display the method by which captains are selected. """
@@ -352,7 +352,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='maps [{captains|vote|random}]',
-                      brief='Set or view the map selection method (must have admin perms)')
+                      brief=translate('command-maps-brief'))
     @commands.has_permissions(administrator=True)
     async def maps(self, ctx, method=None):
         """ Set or display the method by which the teams are created. """
@@ -379,7 +379,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='mpool {+|-}<map name> ...',
-                      brief='Add or remove maps from the map pool (must have admin perms)')
+                      brief=translate('command-mpool-brief'))
     @commands.has_permissions(administrator=True)
     async def mpool(self, ctx, *args):
         """ Edit the guild's map pool for map drafts. """
@@ -435,7 +435,7 @@ class CommandsCog(commands.Cog):
         await ctx.send(embed=embed)
 
     @commands.command(usage='end [match id]',
-                      brief='Force end a match (must have admin perms)')
+                      brief=translate('command-end-brief'))
     @commands.has_permissions(administrator=True)
     async def end(self, ctx, *args):
         """ Force end a match. """
@@ -457,7 +457,7 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)
 
-    @commands.command(brief='See your stats')
+    @commands.command(brief=translate('command-stats-brief'))
     async def stats(self, ctx):
         """ Send an embed containing stats data parsed from the player object returned from the API. """
         if not await self.bot.isValidChannel(ctx):
@@ -487,7 +487,7 @@ class CommandsCog(commands.Cog):
 
         await ctx.send(embed=embed)
 
-    @commands.command(brief='See the top players in the server')
+    @commands.command(brief=translate('command-leaders-brief'))
     async def leaders(self, ctx):
         """ Send an embed containing the leaderboard data parsed from the player objects returned from the API. """
         if not await self.bot.isValidChannel(ctx):

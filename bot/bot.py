@@ -51,8 +51,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.all_maps = []
 
         # Set constants
-        self.description = 'An easy to use, fully automated system to set up and play CS:GO pickup games'
-        self.color = 0x000000
+        self.color = 0x0086FF
         self.activity = discord.Activity(type=discord.ActivityType.watching, name="CS:GO League")
 
         # Create session for API
