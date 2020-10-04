@@ -197,7 +197,7 @@ class TeamDraftMenu(discord.Message):
             players.sort(reverse=True, key=lambda x: x.score)
 
             for team in self.teams:
-                captain = self.bot.get_league(self.channel.category_id).get_member(players.pop(0).discord)
+                captain = self.guild.get_member(players.pop(0).discord)
                 self.members_left.remove(captain)
                 team.append(captain)
         elif captain_method == 'random':
