@@ -4,8 +4,7 @@ from discord.ext import commands
 from discord.utils import get
 from discord.errors import NotFound
 
-from bot.helpers.utils import align_text
-from bot.helpers.utils import translate
+from bot.helpers.utils import align_text, translate
 
 
 class CommandsCog(commands.Cog):

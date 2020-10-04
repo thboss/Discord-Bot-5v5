@@ -2,7 +2,6 @@
 
 import asyncio
 import discord
-from discord.errors import NotFound
 from random import shuffle, choice
 
 from bot.helpers.utils import translate
@@ -427,7 +426,7 @@ class MapVoteMenu(discord.Message):
         self.bot.remove_listener(self._process_vote, name='on_reaction_add')
         try:
             await self.clear_reactions()
-        except NotFound:
+        except discord.errors.NotFound:
             pass
 
         # Gather results
