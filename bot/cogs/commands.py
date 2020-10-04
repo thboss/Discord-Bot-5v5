@@ -445,13 +445,13 @@ class CommandsCog(commands.Cog):
         if len(args) == 0:
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}end <Match ID>`'
         else:
-            try:
-                if args[0] in self.match_cog.match_dict[ctx.channel.category] and await self.bot.api_helper.end_match(
-                        args[0]):
+            matches = await self.bot.api_helper.matches_status()
+            if args[0] in matches:
+                if await self.bot.api_helper.end_match(args[0]):
                     msg = translate("match-cancelled", args[0])
                 else:
-                    msg = translate("invalid-match-id")
-            except KeyError:
+                    msg = translate('match-already-over', args[0])
+            else:
                 msg = translate("invalid-match-id")
 
         embed = self.bot.embed_template(title=msg)
