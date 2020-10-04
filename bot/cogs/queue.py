@@ -1,7 +1,7 @@
 # queue.py
 
 from discord.ext import commands
-from discord.errors import NotFound
+from discord.errors import NotFound, HTTPException
 from collections import defaultdict
 import asyncio
 
@@ -150,13 +150,19 @@ class QueueCog(commands.Cog):
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
                         all_readied = await match_cog.start_match(after_lobby.category, queue_members)
 
-                        await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
+                        if all_readied:
+                            await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
 
-                        if not all_readied:
+                        if match_cog.no_servers[after_lobby]:
+                            await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
                             prelobby_id = await self.bot.get_league_data(after_lobby.category, 'voice_prelobby')
                             prelobby = after_lobby.guild.get_channel(prelobby_id)
                             for member in queue_members:
-                                await member.move_to(prelobby)
+                                try:
+                                    await member.move_to(prelobby)
+                                except (AttributeError, HTTPException):
+                                    pass
+                            match_cog.no_servers[after_lobby] = False
 
                         self.block_lobby[after_lobby.category] = False
                         await after_lobby.set_permissions(pug_role, connect=True)
