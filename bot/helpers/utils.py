@@ -4,6 +4,10 @@ import math
 import os
 import json
 
+from dotenv import load_dotenv
+
+
+load_dotenv()
 
 with open('translations.json', 'r') as f:
     translations = json.load(f)
