@@ -26,6 +26,15 @@ class MatchCog(commands.Cog):
         self.ready_message = {}
         self.match_dict = {}
 
+        async def check_over_matches():
+            if self.match_dict:
+                matches = await self.bot.api_helper.matches_status()
+                for matchid in list(self.match_dict):
+                    if matchid in matches and matches[matchid]:
+                        await self.delete_match_channels(matchid)
+
+        self.bot.scheduler.add_job(check_over_matches, 'interval', seconds=10, id='check_over')
+
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
         menu = menus.TeamDraftMenu(message, self.bot, members)
@@ -103,10 +112,7 @@ class MatchCog(commands.Cog):
             user_limit=len(team_two))
         await channel_team_two.set_permissions(role, connect=False, read_messages=True)
 
-        if category not in self.match_dict:
-            self.match_dict[category] = {}
-
-        self.match_dict[category][match_id] = [match_category, channel_team_one, channel_team_two, team_one, team_two]
+        self.match_dict[match_id] = [category, match_category, channel_team_one, channel_team_two, team_one, team_two]
 
         lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
@@ -125,13 +131,13 @@ class MatchCog(commands.Cog):
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
-    async def delete_match_channels(self, category, matchid):
+    async def delete_match_channels(self, matchid):
         """ Move players to another channels and remove voice channels on match end. """
-        lobby_id = await self.bot.get_league_data(category, 'voice_lobby')
+        lobby_id = await self.bot.get_league_data(self.match_dict[matchid][0], 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
-        prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+        prelobby_id = await self.bot.get_league_data(self.match_dict[matchid][0], 'voice_prelobby')
         prelobby = self.bot.get_channel(prelobby_id)
-        match_players = self.match_dict[category][matchid][3] + self.match_dict[category][matchid][4]
+        match_players = self.match_dict[matchid][4] + self.match_dict[matchid][5]
 
         for player in match_players:
             await lobby.set_permissions(player, overwrite=None)
@@ -140,10 +146,10 @@ class MatchCog(commands.Cog):
             except (AttributeError, discord.errors.HTTPException):
                 pass
 
-        for channel in reversed(self.match_dict[category][matchid][:3]):
+        for channel in reversed(self.match_dict[matchid][1:4]):
             await channel.delete()
 
-        self.match_dict[category].pop(matchid)
+        self.match_dict.pop(matchid)
 
     def _ready_embed(self, category):
         str_value = ''
@@ -309,12 +315,5 @@ class MatchCog(commands.Cog):
 
             await self.ready_message[category].edit(embed=burst_embed)
             await self.create_match_channels(category, str(match.id), team_one, team_two)
-
-            async def check_live():
-                if not await self.bot.api_helper.is_match_live(str(match.id)):
-                    await self.delete_match_channels(category, str(match.id))
-                    self.bot.scheduler.remove_job(str(match.id))
-
-            self.bot.scheduler.add_job(check_live, 'interval', seconds=10, id=str(match.id))
 
             return True  # Everyone readied up

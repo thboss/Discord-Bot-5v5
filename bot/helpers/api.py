@@ -257,6 +257,14 @@ class ApiHelper:
             resp_json = await resp.json()
             return resp_json['success']
 
+    async def matches_status(self):
+        """ Get matches status through the API. """
+        url = f'{self.base_url}/match/status'
+
+        async with self.session.get(url=url, headers=self.headers) as resp:
+            resp_json = await resp.json()
+            return resp_json
+
     async def start_match(self, team_one, team_two, spectators=None, map_pick=None):
         """ Get a match server from the API. """
         url = f'{self.base_url}/match/start'
