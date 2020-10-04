@@ -21,7 +21,7 @@
         "capacity-out-range":   "Capacity is outside of valid range (2-100)",
         "set-capacity":         "Queue capacity set to **{}**",
         "queue-emptied-footer": "The queue has been emptied because of the capacity change",
-        "required-perm":        "Using this commnad required **{}** permission!",
+        "required-perm":        "Sorry! This commnad requires **{}** permission!",
         "team-pick-footer":     "React to any of the numbers below to pick the corresponding member",
         "empty":                "Empty",
         "players-left":         "Players Left",
