@@ -4,12 +4,15 @@ import aiohttp
 import asyncio
 import discord
 from discord.ext import commands
+from discord.utils import get
+from discord.errors import HTTPException
 
 from . import menus
 from bot.helpers.utils import translate
 
 from random import shuffle, choice
 from traceback import print_exception
+from collections import defaultdict
 import sys
 
 
@@ -25,6 +28,8 @@ class MatchCog(commands.Cog):
         self.future = {}
         self.ready_message = {}
         self.match_dict = {}
+        self.no_servers = {}
+        self.no_servers = defaultdict(lambda: False, self.no_servers)
 
         async def check_over_matches():
             if self.match_dict:
@@ -98,7 +103,7 @@ class MatchCog(commands.Cog):
         """Create teams voice channels and move players inside"""
 
         match_category = await category.guild.create_category_channel(f'{translate("match")}{match_id}')
-        role = discord.utils.get(category.guild.roles, name='@everyone')
+        role = get(category.guild.roles, name='@everyone')
 
         channel_team_one = await category.guild.create_voice_channel(
             name=f'{translate("team")} {team_one[0].display_name}',
@@ -124,11 +129,11 @@ class MatchCog(commands.Cog):
             await lobby.set_permissions(p2, connect=False)            
             try:
                 await p1.move_to(channel_team_one)
-            except (AttributeError, discord.errors.HTTPException):
+            except (AttributeError, HTTPException):
                 pass 
             try:
                 await p2.move_to(channel_team_two)
-            except (AttributeError, discord.errors.HTTPException):
+            except (AttributeError, HTTPException):
                 pass
 
     async def delete_match_channels(self, matchid):
@@ -143,7 +148,7 @@ class MatchCog(commands.Cog):
             await lobby.set_permissions(player, overwrite=None)
             try:
                 await player.move_to(prelobby)
-            except (AttributeError, discord.errors.HTTPException):
+            except (AttributeError, HTTPException):
                 pass
 
         for channel in reversed(self.match_dict[matchid][1:4]):
@@ -228,7 +233,7 @@ class MatchCog(commands.Cog):
             for player in unreadied:
                 try:
                     await player.move_to(prelobby)
-                except (AttributeError, discord.errors.HTTPException):
+                except (AttributeError, HTTPException):
                     pass
 
             await self.ready_message[category].edit(content='', embed=burst_embed)
@@ -284,6 +289,7 @@ class MatchCog(commands.Cog):
                 burst_embed = self.bot.embed_template(title=translate('problem'), description=description)
                 await self.ready_message[category].edit(embed=burst_embed)
                 print_exception(type(e), e, e.__traceback__, file=sys.stderr)  # Print exception to stderr
+                self.no_servers[category] = True
                 return False
             else:
                 await asyncio.sleep(3)
