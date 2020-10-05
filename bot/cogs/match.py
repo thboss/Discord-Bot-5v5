@@ -35,7 +35,7 @@ class MatchCog(commands.Cog):
             if self.match_dict:
                 matches = await self.bot.api_helper.matches_status()
                 for matchid in list(self.match_dict):
-                    if matchid in matches and matches[matchid]:
+                    if matchid in matches and not matches[matchid]:
                         await self.delete_match_channels(matchid)
 
         self.bot.scheduler.add_job(check_over_matches, 'interval', seconds=10, id='check_over')
