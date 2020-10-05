@@ -462,7 +462,13 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        user = ctx.author
+        try:
+            user = ctx.message.mentions[0]
+        except IndexError:
+            user = ctx.author
+        else:
+            user = ctx.message.mentions[0]
+                        
         player = await self.bot.api_helper.get_player(user.id)
 
         if player:
