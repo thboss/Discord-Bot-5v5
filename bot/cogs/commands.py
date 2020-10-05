@@ -466,7 +466,7 @@ class CommandsCog(commands.Cog):
             user = ctx.message.mentions[0]
         except IndexError:
             user = ctx.author
-                        
+
         player = await self.bot.api_helper.get_player(user.id)
 
         if player:
