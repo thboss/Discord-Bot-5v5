@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-with open('translations.json', 'r') as f:
+with open('translations.json', encoding="utf8") as f:
     translations = json.load(f)
 
 
