@@ -165,6 +165,7 @@ class MatchCog(commands.Cog):
         self.match_dict.pop(matchid)
 
     def _ready_embed(self, category):
+        """"""
         str_value = ''
         description = translate('react-ready', '✅')
         embed = self.bot.embed_template(title=translate('queue-filled'), description=description)
@@ -182,21 +183,22 @@ class MatchCog(commands.Cog):
 
     async def _process_ready(self, reaction, member):
         """ Check if all players in the queue have readied up. """
-        if member.id == self.ready_message[reaction.message.channel.category].author.id:
+        category = reaction.message.channel.category
+        if member.id == self.ready_message[category].author.id:
             return
         # Check if this is a message we care about
-        if reaction.message.id != self.ready_message[reaction.message.channel.category].id:
+        if reaction.message.id != self.ready_message[category].id:
             return
         # Check if this is a member and reaction we care about
-        if member not in self.members[reaction.message.channel.category] or reaction.emoji != '✅':
-            await self.ready_message[reaction.message.channel.category].remove_reaction(reaction, member)
+        if member not in self.members[category] or reaction.emoji != '✅':
+            await self.ready_message[category].remove_reaction(reaction, member)
             return
 
-        self.reactors[reaction.message.channel.category].add(member)
-        await self.ready_message[reaction.message.channel.category].edit(embed=self._ready_embed(reaction.message.channel.category))
-        if self.reactors[reaction.message.channel.category].issuperset(self.members[reaction.message.channel.category]):
-            if self.future[reaction.message.channel.category] is not None:
-                self.future[reaction.message.channel.category].set_result(None)
+        self.reactors[category].add(member)
+        await self.ready_message[category].edit(embed=self._ready_embed(category))
+        if self.reactors[category].issuperset(self.members[category]):
+            if self.future[category] is not None:
+                self.future[category].set_result(None)
 
     async def start_match(self, category, members):
         """ Ready all the members up and start a match. """
