@@ -101,7 +101,7 @@ class CommandsCog(commands.Cog):
         try:
             user = ctx.message.mentions[0]
         except IndexError:
-            title = translate('invalid-usage')
+            title = f"{translate('invalid-usage')}: `{self.bot.command_prefix[0]}unlink <mention>`"
         else:
             linked = await self.bot.api_helper.is_linked(user.id)
 
