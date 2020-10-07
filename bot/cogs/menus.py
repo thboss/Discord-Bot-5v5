@@ -347,6 +347,79 @@ class MapDraftMenu(discord.Message):
         return map_pick
 
 
+class ReadyMenu(discord.Message):
+    def __init__(self, message, bot, members):
+        """ Copy constructor from a message and specific team draft args. """
+        # Copy all attributes from message object
+        for attr_name in message.__slots__:
+            try:
+                attr_val = getattr(message, attr_name)
+            except AttributeError:
+                continue
+
+            setattr(self, attr_name, attr_val)
+
+        # Add custom attributes
+        self.bot = bot
+        self.members = members
+        self.reactors = None
+        self.future = None
+        self.players = None
+
+    def _ready_embed(self):
+        """ Generate the menu embed based on the current ready status of players. """
+        str_value = ''
+        description = translate('react-ready', '✅')
+        embed = self.bot.embed_template(title=translate('queue-filled'), description=description)
+
+        for num, member in enumerate(self.members, start=1):
+            if member not in self.reactors:
+                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.players[num-1].league_profile})\n '
+            else:
+                str_value += f'✅  {num}. [{member.display_name}]({self.players[num-1].league_profile})\n '
+
+        embed.add_field(name=f":hourglass: __{translate('player')}__",
+                        value='-------------------\n' + str_value)
+        return embed
+
+    async def _process_ready(self, reaction, member):
+        """ Track who has readied up. """
+
+        if member.id == self.author.id:
+            return
+        # Check if this is a message we care about
+        if reaction.message.id != self.id:
+            return
+        # Check if this is a member and reaction we care about
+        if member not in self.members or reaction.emoji != '✅':
+            await self.remove_reaction(reaction, member)
+            return
+
+        self.reactors.add(member)
+        await self.edit(embed=self._ready_embed())
+        if self.reactors.issuperset(self.members):
+            if self.future is not None:
+                self.future.set_result(None)
+
+    async def ready_up(self):
+        """"""
+        self.reactors = set()
+        self.future = self.bot.loop.create_future()
+        self.players = await self.bot.api_helper.get_players([member.id for member in self.members])
+        await self.edit(embed=self._ready_embed())
+        await self.add_reaction('✅')
+
+        self.bot.add_listener(self._process_ready, name='on_reaction_add')
+        try:
+            await asyncio.wait_for(self.future, 60)
+        except asyncio.TimeoutError:
+            pass
+
+        self.bot.remove_listener(self._process_ready, name='on_reaction_add')
+        
+        return self.reactors
+
+
 class MapVoteMenu(discord.Message):
     """ Message containing the components for a map draft. """
 

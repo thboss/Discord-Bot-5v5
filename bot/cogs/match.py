@@ -22,10 +22,6 @@ class MatchCog(commands.Cog):
     def __init__(self, bot):
         """ Set attributes. """
         self.bot = bot
-        self.members = {}
-        self.queue_profiles = {}
-        self.reactors = {}
-        self.future = {}
         self.ready_message = {}
         self.match_dict = {}
         self.no_servers = {}
@@ -99,6 +95,11 @@ class MatchCog(commands.Cog):
         """"""
         return choice(mpool)
 
+    async def track_ready(self, message, members):
+        menu = menus.ReadyMenu(message, self.bot, members)
+        ready_users = await menu.ready_up()
+        return ready_users
+
     async def create_match_channels(self, league_category, match_id, members_team_one, members_team_two):
         """ Create teams voice channels and move players into. """
 
@@ -164,52 +165,10 @@ class MatchCog(commands.Cog):
 
         self.match_dict.pop(matchid)
 
-    def _ready_embed(self, category):
-        """"""
-        str_value = ''
-        description = translate('react-ready', '✅')
-        embed = self.bot.embed_template(title=translate('queue-filled'), description=description)
-
-        for num, member in enumerate(self.members[category], start=1):
-            if member not in self.reactors[category]:
-                str_value += f':heavy_multiplication_x:  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n '
-            else:
-                str_value += f'✅  {num}. [{member.display_name}]({self.queue_profiles[category][num-1].league_profile})\n '
-
-        embed.add_field(name=f":hourglass: __{translate('player')}__",
-                        value='-------------------\n' + str_value)
-        del str_value, description
-        return embed
-
-    async def _process_ready(self, reaction, member):
-        """ Check if all players in the queue have readied up. """
-        category = reaction.message.channel.category
-        if member.id == self.ready_message[category].author.id:
-            return
-        # Check if this is a message we care about
-        if reaction.message.id != self.ready_message[category].id:
-            return
-        # Check if this is a member and reaction we care about
-        if member not in self.members[category] or reaction.emoji != '✅':
-            await self.ready_message[category].remove_reaction(reaction, member)
-            return
-
-        self.reactors[category].add(member)
-        await self.ready_message[category].edit(embed=self._ready_embed(category))
-        if self.reactors[category].issuperset(self.members[category]):
-            if self.future[category] is not None:
-                self.future[category].set_result(None)
-
     async def start_match(self, category, members):
         """ Ready all the members up and start a match. """
-        queue_cog = self.bot.get_cog('QueueCog')
-        self.members[category] = members
-        self.reactors[category] = set()  # Track who has readied up
-        self.future[category] = self.bot.loop.create_future()
-        self.queue_profiles[category] = await self.bot.api_helper.get_players([member.id for member in members])
 
-        member_mentions = [member.mention for member in members]
-        burst_embed = self._ready_embed(category)
+        queue_cog = self.bot.get_cog('QueueCog')
         msg = queue_cog.last_queue_msgs.get(category)
         channel_id = await self.bot.get_league_data(category, 'text_queue')
         text_channel = category.guild.get_channel(channel_id)
@@ -218,15 +177,11 @@ class MatchCog(commands.Cog):
             await msg.delete()
             queue_cog.last_queue_msgs.pop(category)
 
-        self.ready_message[category] = await text_channel.send(''.join(member_mentions), embed=burst_embed)
-        await self.ready_message[category].add_reaction('✅')
+        self.ready_message[category] = await text_channel.send(''.join([member.mention for member in members]))
+        ready_users = await self.track_ready(self.ready_message[category], members)
+        unreadied = set(members) - ready_users
 
-        self.bot.add_listener(self._process_ready, name='on_reaction_add')
-        try:
-            await asyncio.wait_for(self.future[category], 60)
-        except asyncio.TimeoutError:  # Not everyone readied up
-            self.bot.remove_listener(self._process_ready, name='on_reaction_add')
-            unreadied = set(members) - self.reactors[category]
+        if unreadied:  # Not everyone readied up
             awaitables = [
                 self.ready_message[category].clear_reactions(),
                 self.bot.db_helper.delete_queued_users(category.id, *(member.id for member in unreadied))
@@ -250,7 +205,6 @@ class MatchCog(commands.Cog):
             return False  # Not everyone readied up
         else:  # Everyone readied up
             # Attempt to make teams and start match
-            self.bot.remove_listener(self._process_ready, name='on_reaction_add')
             awaitables = [
                 self.ready_message[category].clear_reactions(),
                 self.bot.db_helper.get_league(category.id)
