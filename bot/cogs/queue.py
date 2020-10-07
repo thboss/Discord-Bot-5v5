@@ -45,47 +45,24 @@ class QueueCog(commands.Cog):
     async def update_last_msg(self, category, embed):
         """ Send embed message and delete the last one sent. """
         try:
-            after_msg = self.last_queue_msgs.get(category)
+            msg = self.last_queue_msgs.get(category)
         except:
-            after_msg = None
+            msg = None
 
         try:
-            after_text_id = await self.bot.get_league_data(category, 'text_queue')
+            queue_id = await self.bot.get_league_data(category, 'text_queue')
         except:
-            after_text_id = None
+            queue_id = None
 
-        after_text_channel = category.guild.get_channel(after_text_id)
+        queue_channel = category.guild.get_channel(queue_id)
 
-        if after_msg is None:
-            self.last_queue_msgs[category] = await after_text_channel.send(embed=embed)
+        if msg is None:
+            self.last_queue_msgs[category] = await queue_channel.send(embed=embed)
         else:
             try:
-                await after_msg.edit(embed=embed)
+                await msg.edit(embed=embed)
             except NotFound:
-                self.last_queue_msgs[category] = await after_text_channel.send(embed=embed)
-
-    async def _update_last_msg(self, category, embed):
-        """ Send embed message and delete the last one sent. """
-
-        try:
-            before_msg = self.last_queue_msgs.get(category)
-        except:
-            before_msg = None
-
-        try:
-            before_text_id = await self.bot.get_league_data(category, 'text_queue')
-        except:
-            before_text_id = None
-
-        before_text_channel = category.guild.get_channel(before_text_id)
-
-        if before_msg is None:
-            self.last_queue_msgs[category] = await before_text_channel.send(embed=embed)
-        else:
-            try:
-                await before_msg.edit(embed=embed)
-            except NotFound:
-                self.last_queue_msgs[category] = await before_text_channel.send(embed=embed)
+                self.last_queue_msgs[category] = await queue_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
@@ -188,4 +165,4 @@ class QueueCog(commands.Cog):
 
             embed = await self.queue_embed(before_lobby.category, title)
             # Update queue display message
-            await self._update_last_msg(before_lobby.category, embed)
+            await self.update_last_msg(before_lobby.category, embed)
