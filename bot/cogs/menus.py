@@ -150,7 +150,7 @@ class TeamDraftMenu(discord.Message):
     async def _process_pick(self, reaction, member):
         """ Handler function for player pick reactions. """
         # Check that reaction is on this message and member is in the team draft
-        if reaction.message.id != self.id or member.id == self.author.id:
+        if reaction.message.id != self.id or member == self.author:
             return
 
         # Check that picked player is in the player pool
@@ -294,7 +294,7 @@ class MapDraftMenu(discord.Message):
     async def _process_ban(self, reaction, member):
         """ Handler function for map ban reactions. """
         # Check that reaction is on this message
-        if reaction.message.id != self.id:
+        if reaction.message.id != self.id or member == self.author:
             return
 
         if member not in self.captains or str(reaction) not in [m.emoji for m in self.maps_left] or member != self._active_picker:
@@ -390,7 +390,7 @@ class ReadyMenu(discord.Message):
     async def _process_ready(self, reaction, member):
         """ Track who has readied up. """
         # Check if this is a message we care about
-        if reaction.message.id != self.id or member.id == self.author.id:
+        if reaction.message.id != self.id or member == self.author:
             return
         # Check if this is a member and reaction we care about
         if member not in self.members or reaction.emoji != '✅':
