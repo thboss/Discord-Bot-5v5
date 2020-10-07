@@ -46,8 +46,7 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=msg)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='delete',
-                      brief=translate('command-delete-brief'))
+    @commands.command(brief=translate('command-delete-brief'))
     @commands.has_permissions(administrator=True)
     async def delete(self, ctx):
         if not await self.bot.isValidChannel(ctx):
@@ -91,25 +90,32 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(description=title)
         await ctx.send(content=ctx.author.mention, embed=embed)
 
-    @commands.command(brief=translate('command-unlink-brief'))
+    @commands.command(usage='unlink <mention>',
+                      brief=translate('command-unlink-brief'))
+    @commands.has_permissions(administrator=True)
     async def unlink(self, ctx):
         """ Unlink a player by delete him on the backend. """
         if not await self.bot.isValidChannel(ctx):
             return
 
-        is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
-
-        if not is_linked:
-            title = translate('already-not-linked')
+        try:
+            user = ctx.message.mentions[0]
+        except IndexError:
+            title = translate('invalid-usage')
         else:
-            await self.bot.api_helper.unlink_discord(ctx.author)
-            title = translate('unlinked')
-            role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
-            role = ctx.guild.get_role(role_id)
-            await ctx.author.remove_roles(role)
+            linked = await self.bot.api_helper.is_linked(user.id)
+
+            if not linked:
+                title = translate('already-not-linked')
+            else:
+                await self.bot.api_helper.unlink_discord(user)
+                title = translate('unlinked')
+                role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+                role = ctx.guild.get_role(role_id)
+                await user.remove_roles(role)
 
         embed = self.bot.embed_template(title=title)
-        await ctx.send(content=ctx.author.mention, embed=embed)
+        await ctx.send(embed=embed)
 
     @commands.command(brief=translate('command-check-brief'))
     async def check(self, ctx):
