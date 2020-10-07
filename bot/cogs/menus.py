@@ -297,7 +297,7 @@ class MapDraftMenu(discord.Message):
         if reaction.message.id != self.id or member == self.author:
             return
 
-        if member not in self.captains or str(reaction) not in [m.emoji for m in self.maps_left] or member != self._active_picker:
+        if member not in self.captains or str(reaction) not in [m for m in self.maps_left] or member != self._active_picker:
             await self.remove_reaction(reaction, member)
             return
         # Ban map if the emoji is valid
