@@ -549,6 +549,7 @@ class CommandsCog(commands.Cog):
     @captains.error
     @maps.error
     @end.error
+    @unlink.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):
