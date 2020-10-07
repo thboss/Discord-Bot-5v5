@@ -150,19 +150,21 @@ class TeamDraftMenu(discord.Message):
     async def _process_pick(self, reaction, member):
         """ Handler function for player pick reactions. """
         # Check that reaction is on this message and member is in the team draft
-        if reaction.message.id != self.id or member not in self.members:
+        if reaction.message.id != self.id or member.id == self.author.id:
             return
 
         # Check that picked player is in the player pool
         pick = self.pick_emojis.get(str(reaction.emoji), None)
 
-        if pick is None or pick not in self.members_left:
+        if pick is None or pick not in self.members_left or member not in self.members:
+            await self.remove_reaction(reaction, member)
             return
 
         # Attempt to pick the player for the team
         try:
             self._pick_player(member, pick)
         except PickError as e:  # Player not picked
+            await self.remove_reaction(reaction, member)
             title = e.message
         else:  # Player picked 
             title = translate('team-picked', member.display_name, pick.display_name)
@@ -291,10 +293,13 @@ class MapDraftMenu(discord.Message):
 
     async def _process_ban(self, reaction, member):
         """ Handler function for map ban reactions. """
-        # Check that reaction is on this message and user is a captain
-        if reaction.message.id != self.id or member != self._active_picker:
+        # Check that reaction is on this message
+        if reaction.message.id != self.id:
             return
 
+        if member not in self.captains or str(reaction) not in [m.emoji for m in self.maps_left] or member != self._active_picker:
+            await self.remove_reaction(reaction, member)
+            return
         # Ban map if the emoji is valid
         try:
             map_ban = self.maps_left.pop(str(reaction))
@@ -384,11 +389,8 @@ class ReadyMenu(discord.Message):
 
     async def _process_ready(self, reaction, member):
         """ Track who has readied up. """
-
-        if member.id == self.author.id:
-            return
         # Check if this is a message we care about
-        if reaction.message.id != self.id:
+        if reaction.message.id != self.id or member.id == self.author.id:
             return
         # Check if this is a member and reaction we care about
         if member not in self.members or reaction.emoji != '✅':
@@ -460,13 +462,10 @@ class MapVoteMenu(discord.Message):
         if reaction.message.id != self.id or member == self.author:
             return
 
-        if member not in self.members or str(reaction) not in [m.emoji for m in self.map_pool]:
+        if member not in self.members or member in self.voted_members or str(reaction) not in [m.emoji for m in self.map_pool]:
             await self.remove_reaction(reaction, member)
             return
 
-        if member in self.voted_members:
-            await self.remove_reaction(reaction, member)
-            return
         # Add map vote if it is valid
         self.map_votes[str(reaction)] += 1
 
