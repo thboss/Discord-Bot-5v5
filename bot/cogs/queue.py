@@ -56,13 +56,10 @@ class QueueCog(commands.Cog):
 
         queue_channel = category.guild.get_channel(queue_id)
 
-        if msg is None:
+        try:
+            await msg.edit(embed=embed)
+        except (AttributeError, NotFound):
             self.last_queue_msgs[category] = await queue_channel.send(embed=embed)
-        else:
-            try:
-                await msg.edit(embed=embed)
-            except NotFound:
-                self.last_queue_msgs[category] = await queue_channel.send(embed=embed)
 
     @commands.Cog.listener()
     async def on_voice_state_update(self, member, before, after):
