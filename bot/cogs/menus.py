@@ -173,7 +173,6 @@ class TeamDraftMenu(discord.Message):
             fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
             fat_kid_team.append(self.members_left.pop(0))
             await self._update_menu(title)
-
             if self.future is not None:
                 self.future.set_result(None)
             return
@@ -308,14 +307,12 @@ class MapDraftMenu(discord.Message):
 
         self.ban_number += 1
 
+        await self._update_menu(translate('user-banned-map', member.display_name, map_ban.name))
+
         # Check if the draft is over
         if len(self.maps_left) == 1:
             if self.future is not None:
                 self.future.set_result(None)
-
-            return
-
-        await self._update_menu(translate('user-banned-map', member.display_name, map_ban.name))
 
     async def draft(self, pool, captain_1, captain_2):
         """ Start the team draft and return the teams after it's finished. """
@@ -399,6 +396,7 @@ class ReadyMenu(discord.Message):
 
         self.reactors.add(member)
         await self.edit(embed=self._ready_embed())
+
         if self.reactors.issuperset(self.members):
             if self.future is not None:
                 self.future.set_result(None)
