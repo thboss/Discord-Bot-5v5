@@ -226,6 +226,15 @@ class ApiHelper:
         async with self.session.post(url=url, headers=self.headers, data=data) as resp:
             return resp.status == 200
 
+    async def force_link_discord(self, member_id, steamid):
+        """ Force link discord id with steam on the backend. """
+        url = f'{self.base_url}/discord/forcelink/{member_id}'
+        data = {'steamid': steamid}
+
+        async with self.session.post(url=url, headers=self.headers, data=data) as resp:
+            resp_json = await resp.json()
+            return resp_json['success']
+
     async def unlink_discord(self, member):
         url = f'{self.base_url}/discord/delete/{member.id}'
 

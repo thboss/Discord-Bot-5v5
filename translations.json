@@ -88,6 +88,7 @@
         "unknown-error":        "**Sorry! We can't send you link due to unknown error**",
         "already-not-linked":   "**Sorry! Your Discord is already not linked with any Steam account**",
         "unlinked":             "**Your Discord unlinked successfully**",
+        "force-linked":         "Player **{}** has force linked with Steamid {}",
         "rank-score":           "RankMe Score",
         "matches-played":       "Matches Played",
         "win-percentage":       "Win Percentage",
@@ -127,6 +128,7 @@
         "command-leaders-brief": "See the top players in the server",
         "command-help-brief":   "Display the help menu",
         "command-about-brief":  "Display basic info about this bot",
+        "command-forcelink-brief": "Force link player with steam id (must have admin perms)",
         "bot-description":      "An easy to use, fully automated system to set up and play CS:GO pickup games"
     },
     "ru": {

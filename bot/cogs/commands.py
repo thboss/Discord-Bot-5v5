@@ -90,6 +90,33 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(description=title)
         await ctx.send(content=ctx.author.mention, embed=embed)
 
+    @commands.command(usage='forcelink <mention> <Steam64 ID>',
+                      brief=translate('command-forcelink-brief'))
+    @commands.has_permissions(administrator=True)
+    async def forcelink(self, ctx, *args):
+        """ Force link player with steam on the backend. """
+        if not await self.bot.isValidChannel(ctx):
+            return
+        print(int(args[1]), type(int(args[1])))
+        try:
+            user = ctx.message.mentions[0]
+        except IndexError:
+            title = f"{translate('invalid-usage')}: `{self.bot.command_prefix[0]}forcelink <mention> <Steam64 ID>`"
+        else:
+            link = await self.bot.api_helper.force_link_discord(user.id, args[1])
+
+            if not link:
+                title = 'Sorry! Steam ID is already linked with another discord'
+            else:
+                title = translate('force-linked', user.display_name, args[1])
+                role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+                role = ctx.guild.get_role(role_id)
+                await user.add_roles(role)
+                await self.bot.api_helper.update_discord_name(user)
+
+        embed = self.bot.embed_template(title=title)
+        await ctx.send(embed=embed)
+
     @commands.command(usage='unlink <mention>',
                       brief=translate('command-unlink-brief'))
     @commands.has_permissions(administrator=True)
@@ -550,6 +577,7 @@ class CommandsCog(commands.Cog):
     @maps.error
     @end.error
     @unlink.error
+    @forcelink.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):
