@@ -9,6 +9,7 @@
 1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server before launch the bot.
 
    * The required permissions is `administrator`.
+   * Enable the "server members intent" for your bot, as shown [here](https://discordpy.readthedocs.io/en/latest/intents.html#privileged-intents).
 
 2. Setup and get an API token for the CS:GO League [web API](https://github.com/thboss/csgo-league-web) along with the host base URL.
 
@@ -17,8 +18,6 @@
     * Linux command is `sudo apt-get install libpq-dev`.
 
 4. Run `pip3 install -r requirements.txt` in the repository's root directory to get the necessary libraries.
-
-    * Note that python-Levenshtein requires your system to have a C++ compiler (Visual Studio C++ compiler for Windows or g++ for Linux). This library may be replaced in the future to eliminate this requirement.
 
 5. Install PostgreSQL 9.5 or higher.
 
@@ -49,6 +48,7 @@
     POSTGRESQL_PASSWORD= # The DB password you set
     POSTGRESQL_DB= # "csgoleague" (if you used the same DB name)
     POSTGRESQL_HOST= # The IP address of the DB server (127.0.0.1 if running on the same system as the bot)
+    POSTGRESQL_PORT=5432
     ```
 
 
@@ -83,7 +83,7 @@
       * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
       * Apply the new database migrations by running `python3 migrate.py up`.
 
-2. You can rename channels.
+2. You can rename roles and channels that bot create it.
 
 ## Commands
 
@@ -92,6 +92,10 @@
 `q!create <League name>` **-** Create new league <br>
 
 `q!delete` **-** Delete the league <br>
+
+`q!forcelink <mention> <SteamId64>` **-** Force link a player on the backend <br>
+
+`q!unlink <mention>` **-**  Unlink a player on the backend <br>
 
 `q!remove <mention>` **-** Remove the mentioned user from the queue <br>
 
@@ -118,12 +122,10 @@
 
 `q!link` **-**  Link a player on the backend <br>
 
-`q!unlink` **-**  Unlink a player on the backend <br>
+`q!check` **-** Check if the player has been linked his account and give him role if so <br>
 
 `q!stats` **-** See your stats <br>
 
 `q!leaders` **-** See the top players in the server <br>
-
-`q!check` **-** Check if the player has been linked his account and give him role if so <br>
 
 `q!spectators` **-** View the spectators <br>
