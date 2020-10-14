@@ -62,8 +62,8 @@
 1. Type `q!create <League name>` to create new League and the bot automatically will create these channels:
     * name_queue :    view queue progress.
     * name_commands : bot commands are restrict in this channel.
-    * name_results :  view matches results.
     * name_lobby :    players must join this channel to add to the queue
+    * name_prelobby :    move unreadied players to this channel
 
 2. Type `q!link` in the commands channel and you will get DM has a link.
 
