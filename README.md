@@ -78,7 +78,7 @@
 7. Once match over, Bot remove teams channels.
 
 #### NOTES
-1. Want to add maps are not in map pool?
+1. How to add new maps to the map pool?
       * Empty the database by running `python3 migrate.py down`.
       * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
       * Apply the new database migrations by running `python3 migrate.py up`.
