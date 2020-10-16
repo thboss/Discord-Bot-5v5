@@ -12,7 +12,12 @@ load_dotenv() # Load the environment variables in the local .env file
 def run_bot():
     """ Parse the config file and run the bot. """
     # Get database object for bot
-    connect_url = 'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}/{POSTGRESQL_DB}'
+    user = '{POSTGRESQL_USER}' if '{POSTGRESQL_USER}' else 'csgoleague'
+    password = '{POSTGRESQL_PASSWORD}' if '{POSTGRESQL_PASSWORD}' else 'yourpassword'
+    host = '{POSTGRESQL_HOST}' if '{POSTGRESQL_HOST}' else '127.0.0.1'
+    port = '{POSTGRESQL_PORT}' if '{POSTGRESQL_PORT}' else '5432'
+    db = '{POSTGRESQL_DB}' if '{POSTGRESQL_DB}' else 'csgoleague'
+    connect_url = f'postgresql://{user}:{password}@{host}:{port}/{db}'
     loop = asyncio.get_event_loop()
     db_pool = loop.run_until_complete(asyncpg.create_pool(connect_url.format(**os.environ)))
 
