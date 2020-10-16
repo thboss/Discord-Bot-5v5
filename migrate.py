@@ -9,7 +9,7 @@ from yoyo import get_backend, read_migrations
 def migrate(direction):
     """ Apply Yoyo migrations for a given PostgreSQL database. """
     load_dotenv()
-    connect_url = 'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}/{POSTGRESQL_DB}'
+    connect_url = 'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}'
     backend = get_backend(connect_url.format(**environ))
     migrations = read_migrations('./migrations')
     print('Applying migrations:\n' + '\n'.join(migration.id for migration in migrations))
