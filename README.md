@@ -1,4 +1,4 @@
-# Forked from [csgo-league-bot](https://github.com/csgo-league/csgo-league-bot)
+# Forked from [csgo-queue-bot](https://github.com/cameronshinn/csgo-queue-bot)
 
 ## Requirements
 1. [Web API](https://github.com/thboss/csgo-league-web)
