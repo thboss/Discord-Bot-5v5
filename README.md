@@ -5,7 +5,7 @@
 
 
 ## Features
-- Authenticate player's Discord account with their Steam throght WEB API.
+- Authentication player's Discord account with their Steam throght WEB API.
 - Multiple queues per guild.
 - Multiple matches at time.
 - Multiple Servers.
