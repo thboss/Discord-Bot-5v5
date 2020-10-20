@@ -237,7 +237,7 @@ class MatchCog(commands.Cog):
             spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
-            mpool = [m for m in self.bot.all_maps if await self.bot.get_league_data(category, m.dev_name)]
+            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_league_data(category, m.dev_name)]
 
             if map_method == 'captains':
                 map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])

@@ -98,3 +98,14 @@ class Timer:
 
     def cancel(self):
         self._task.cancel()
+
+
+class Map:
+    """ A group of attributes representing a map. """
+
+    def __init__(self, name, dev_name, emoji, image_url):
+        """ Set attributes. """
+        self.name = name
+        self.dev_name = dev_name
+        self.emoji = emoji
+        self.image_url = image_url

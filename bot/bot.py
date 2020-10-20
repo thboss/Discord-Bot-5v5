@@ -6,6 +6,7 @@ from discord.utils import get
 
 from . import cogs
 from . import helpers
+from .helpers.utils import Map
 
 import aiohttp
 import asyncio
@@ -18,17 +19,6 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 _CWD = os.path.dirname(os.path.abspath(__file__))
 INTENTS_JSON = os.path.join(_CWD, 'intents.json')
-
-
-class Map:
-    """ A group of attributes representing a map. """
-
-    def __init__(self, name, dev_name, emoji, image_url):
-        """ Set attributes. """
-        self.name = name
-        self.dev_name = dev_name
-        self.emoji = emoji
-        self.image_url = image_url
 
 
 class LeagueBot(commands.AutoShardedBot):
@@ -48,7 +38,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.api_base_url = api_base_url
         self.api_key = api_key
         self.db_pool = db_pool
-        self.all_maps = []
+        self.all_maps = {}
 
         # Set constants
         self.color = 0x0086FF
@@ -123,12 +113,9 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                if not self.all_maps:
-                    self.all_maps.append(Map(
-                        emoji_name,
-                        emoji_dev,
-                        f'<:{emoji_dev}:{emoji.id}>',
-                        f'{url_path}{icon.replace(" ", "%20")}'))
+                    self.all_maps[emoji_dev] = Map(emoji_name,emoji_dev,
+                                                     f'<:{emoji_dev}:{emoji.id}>',
+                                                     f'{url_path}{icon.replace(" ", "%20")}')
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -142,6 +129,7 @@ class LeagueBot(commands.AutoShardedBot):
     async def on_guild_join(self, guild):
         """ Insert the newly added guild to the guilds table. """
         await self.db_helper.insert_guilds(guild.id)
+        await self.create_emojis()
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):

@@ -85,7 +85,7 @@ class DBHelper:
 
     async def insert_guilds(self, *guild_ids):
         """ Add a list of guilds into the guilds table and return the ones successfully added. """
-        insert_rows = [(guild_id,) for guild_id in guild_ids]
+        rows = [(guild_id,) for guild_id in guild_ids]
         statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'

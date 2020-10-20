@@ -419,7 +419,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_pool = [m.dev_name for m in self.bot.all_maps if
+        map_pool = [m.dev_name for m in self.bot.all_maps.values() if
                     await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
 
         if len(args) == 0:
@@ -430,7 +430,7 @@ class CommandsCog(commands.Cog):
 
             for arg in args:
                 map_name = arg[1:]  # Remove +/- prefix
-                map_obj = next((m for m in self.bot.all_maps if m.dev_name == map_name), None)
+                map_obj = next((m for m in self.bot.all_maps.values() if m.dev_name == map_name), None)
 
                 if map_obj is None:
                     description += '\u2022 ' + translate('could-not-interpret', arg)
@@ -449,7 +449,7 @@ class CommandsCog(commands.Cog):
             if len(map_pool) < 3:
                 description = translate('map-pool-fewer-3')
             else:
-                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.all_maps}
+                map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.all_maps.values()}
                 await self.bot.db_helper.update_league(ctx.channel.category_id, **map_pool_data)
 
             embed = self.bot.embed_template(title=translate('modified-map-pool'), description=description)
@@ -457,8 +457,8 @@ class CommandsCog(commands.Cog):
             if any_wrong_arg:  # Add example usage footer if command was used incorrectly
                 embed.set_footer(text=f'Ex: {self.bot.command_prefix[0]}mpool +de_cache -de_mirage')
 
-        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps if m.dev_name in map_pool)
-        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps if m.dev_name not in map_pool)
+        active_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps.values() if m.dev_name in map_pool)
+        inactive_maps = ''.join(f'{m.emoji}  `{m.dev_name}`\n' for m in self.bot.all_maps.values() if m.dev_name not in map_pool)
 
         if not inactive_maps:
             inactive_maps = f'*{translate("none")}*'
