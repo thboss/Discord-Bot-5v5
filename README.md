@@ -82,7 +82,7 @@
 
 ## How to play
 
-1. Type `q!create <League name>` to create new League and the bot automatically will create these channels:
+1. Type `q!create <name>` to create new PUG and the bot will automatically create these channels:
     * name_queue :    view queue progress.
     * name_commands : bot commands are restrict in this channel.
     * name_lobby :    players must join this channel to add to the queue
