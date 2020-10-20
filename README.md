@@ -19,6 +19,7 @@
 - Auto delete teams channels on match end.
 - Force end matches.
 - Rank system.
+- Translations file.
 
 ## Requirements
 1. [Web API](https://github.com/thboss/csgo-league-web)
