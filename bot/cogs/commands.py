@@ -3,8 +3,9 @@
 from discord.ext import commands
 from discord.utils import get
 from discord.errors import NotFound
+import os
 
-from bot.helpers.utils import align_text, translate
+from bot.helpers.utils import align_text, translate, timedelta_str, unbantime
 
 
 class CommandsCog(commands.Cog):
@@ -565,6 +566,84 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title, description=description)
         await ctx.send(embed=embed)
 
+    @commands.command(usage='region {ASIA|EU}',
+                      brief=translate('command-region-brief'))
+    @commands.has_permissions(administrator=True)
+    async def region(self, ctx, region=None):
+        """ Set or view the server region. """
+        if not await self.bot.isValidChannel(ctx):
+            return
+
+        cur_region = await self.bot.get_league_data(ctx.channel.category, 'region')
+        valid_regions = os.environ['DISCORD_LEAGUE_REGIONS'].replace(' ', '').split(',')
+
+        if region is None:
+            title = translate('current-region', cur_region)
+        else:
+            region = region.upper()
+
+            if region == cur_region:
+                title = translate('region-already', region)
+            elif region in valid_regions:
+                title = translate('set-region', region)
+                await self.bot.db_helper.update_league(ctx.channel.category_id, region=region)
+            else:
+                title = translate('region-valid') + ', '.join(map(str, valid_regions))
+
+        embed = self.bot.embed_template(title=title)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='ban <user mention> ... [<days>d] [<hours>h] [<minutes>m]',
+                      brief=translate('command-ban-brief'))
+    @commands.has_permissions(ban_members=True)
+    async def ban(self, ctx, *args):
+        """ Ban users mentioned in the command from joining the queue for a certain amount of time or indefinitely. """
+        # Check that users are mentioned
+        if len(ctx.message.mentions) == 0:
+            embed = self.bot.embed_template(title=translate('mention-user-to-ban'))
+            await ctx.send(embed=embed)
+            return
+
+        time_delta, unban_time = unbantime(ctx.message.content)
+
+        # Get user IDs to ban from mentions and insert them into ban table
+        user_ids = [user.id for user in ctx.message.mentions]
+        await self.bot.db_helper.insert_banned_users(ctx.guild.id, *user_ids, unban_time=unban_time)
+
+        # Generate embed and send message
+        banned_users_str = ', '.join(f'**{user.display_name}**' for user in ctx.message.mentions)
+        ban_time_str = '' if unban_time is None else f' for {timedelta_str(time_delta)}'
+        embed = self.bot.embed_template(title=f'Banned {banned_users_str}{ban_time_str}')
+        embed.set_footer(text=translate('banned-footer'))
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='unban <user mention> ...',
+                      brief=translate('command-unban-brief'))
+    @commands.has_permissions(ban_members=True)
+    async def unban(self, ctx):
+        """ Unban users mentioned in the command so they can join the queue. """
+        # Check that users are mentioned
+        if len(ctx.message.mentions) == 0:
+            embed = self.bot.embed_template(title='mention-user-to-unban')
+            await ctx.send(embed=embed)
+            return
+
+        # Get user IDs to unban from mentions and delete them from the ban table
+        user_ids = [user.id for user in ctx.message.mentions]
+        unbanned_ids = await self.bot.db_helper.delete_banned_users(ctx.guild.id, *user_ids)
+
+        # Generate embed and send message
+        unbanned_users = [user for user in ctx.message.mentions if user.id in unbanned_ids]
+        never_banned_users = [user for user in ctx.message.mentions if user.id not in unbanned_ids]
+        unbanned_users_str = ', '.join(f'**{user.display_name}**' for user in unbanned_users)
+        never_banned_users_str = ', '.join(f'**{user.display_name}**' for user in never_banned_users)
+        title_1 = 'nobody' if unbanned_users_str == '' else unbanned_users_str
+        were_or_was = 'were' if len(never_banned_users) > 1 else 'was'
+        title_2 = '' if never_banned_users_str == '' else f' ({never_banned_users_str} {were_or_was} never banned)'
+        embed = self.bot.embed_template(title=f'Unbanned {title_1}{title_2}')
+        embed.set_footer(text=translate('unbanned-footer'))
+        await ctx.send(embed=embed)
+
     @remove.error
     @empty.error
     @cap.error
@@ -578,6 +657,9 @@ class CommandsCog(commands.Cog):
     @end.error
     @unlink.error
     @forcelink.error
+    @region.error
+    @ban.error
+    @unban.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):

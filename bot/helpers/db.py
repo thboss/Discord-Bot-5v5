@@ -55,7 +55,7 @@ class DBHelper:
 
     async def insert_leagues(self, *league_ids):
         """ Add a list of leagues into the leagues table and return the ones successfully added. """
-        rows = [tuple([league_id] + [None] * 9 + [None] * len(maps)) for league_id in league_ids]
+        rows = [tuple([league_id] + [None] * 10 + [None] * len(maps)) for league_id in league_ids]
         statement = (
             'INSERT INTO leagues (id)\n'
             '    (SELECT id FROM unnest($1::leagues[]))\n'
@@ -85,7 +85,7 @@ class DBHelper:
 
     async def sync_guilds(self, *guild_ids):
         """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [tuple([guild_id] + [None] * 9 + [None] * len(maps)) for guild_id in guild_ids]
+        insert_rows = [tuple([guild_id]) for guild_id in guild_ids]
         insert_statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'
@@ -187,6 +187,55 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'user_id')
 
+    async def get_banned_users(self, guild_id):
+        """ Get all the banned users of the guild from the banned_users table. """
+        delete_statement = (
+            'DELETE FROM banned_users\n'
+            '    WHERE guild_id = $1 AND CURRENT_TIMESTAMP > unban_time;'
+        )
+        select_statement = (
+            'SELECT * FROM banned_users\n'
+            '    WHERE guild_id = $1;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(delete_statement, guild_id)
+
+            async with connection.transaction():
+                queue = await connection.fetch(select_statement, guild_id)
+
+        return dict(zip(self._get_record_attrs(queue, 'user_id'), self._get_record_attrs(queue, 'unban_time')))
+
+    async def insert_banned_users(self, guild_id, *user_ids, unban_time=None):
+        """ Insert multiple users of a guild into the banned_users table"""
+        statement = (
+            'INSERT INTO banned_users (guild_id, user_id, unban_time)\n'
+            '    VALUES($1, $2, $3)\n'
+            '    ON CONFLICT (guild_id, user_id) DO UPDATE\n'
+            '    SET unban_time = EXCLUDED.unban_time;'
+        )
+
+        insert_rows = [(guild_id, user_id, unban_time) for user_id in user_ids]
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.executemany(statement, insert_rows)
+
+    async def delete_banned_users(self, guild_id, *user_ids):
+        """ Delete multiple users of a guild from the banned_users table. """
+        statement = (
+            'DELETE FROM banned_users\n'
+            '    WHERE guild_id = $1 AND user_id = ANY($2::BIGINT[])\n'
+            '    RETURNING user_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id, user_ids)
+
+        return self._get_record_attrs(deleted, 'user_id')
+
     async def get_spect_users(self, guild_id):
         """ Get all the queued users of the guild from the spect_users table. """
         statement = (
@@ -246,3 +295,11 @@ class DBHelper:
     async def update_league(self, league_id, **data):
         """ Update a guild's row in the leagues table. """
         return await self._update_row('leagues', league_id, **data)
+
+    async def get_guild(self, guild_id):
+        """ Get a guild's row from the guilds table. """
+        return await self._get_row('guilds', guild_id)
+
+    async def update_guild(self, guild_id, **data):
+        """ Update a guild's row in the guilds table. """
+        return await self._update_row('guilds', guild_id, **data)

@@ -7,12 +7,14 @@ from discord.utils import get
 from discord.errors import HTTPException
 
 from . import menus
-from bot.helpers.utils import translate
+from bot.helpers.utils import translate, unbantime, timedelta_str, Timer
 
 from random import shuffle, choice
 from traceback import print_exception
 from collections import defaultdict
+from functools import partial
 import sys
+import os
 
 
 class MatchCog(commands.Cog):
@@ -23,6 +25,7 @@ class MatchCog(commands.Cog):
         self.bot = bot
         self.ready_message = {}
         self.match_dict = {}
+        self.disconnected_players = {}
         self.no_servers = {}
         self.no_servers = defaultdict(lambda: False, self.no_servers)
 
@@ -32,8 +35,13 @@ class MatchCog(commands.Cog):
                 for matchid in list(self.match_dict):
                     if matchid in matches and not matches[matchid]:
                         await self.delete_match_channels(matchid)
+                        for player in list(self.disconnected_players):
+                            self.disconnected_players[player].cancel()
+                            self.disconnected_players.pop(player)
 
         self.bot.scheduler.add_job(check_over_matches, 'interval', seconds=10, id='check_over')
+    
+    team_left_time = int(os.environ['DISCORD_LEAGUE_LEFT_TIME']) * 60
 
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
@@ -244,9 +252,11 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=translate('fetching-server'))
             await self.ready_message[category].edit(content='', embed=burst_embed)
 
+            region = await self.bot.get_league_data(category, 'region')
+
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, map_pick.dev_name)
+                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, map_pick.dev_name, region)
             except aiohttp.ClientResponseError as e:
                 description = translate('no-servers')
                 burst_embed = self.bot.embed_template(title=translate('problem'), description=description)
@@ -278,11 +288,74 @@ class MatchCog(commands.Cog):
                                       value=''.join(f'{num}. [{member.display_name}]({team1_players[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
                 burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team2_players[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
-                burst_embed.add_field(name=f'__Spectators__',
-                                      value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
+                burst_embed.add_field(name=f"__{translate('spectators')}__",
+                                      value=translate('no-spectators') if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
                 burst_embed.set_footer(text=translate('server-message-footer'))
 
             await self.ready_message[category].edit(embed=burst_embed)
             await self.create_match_channels(category, str(match.id), team_one, team_two)
 
             return True  # Everyone readied up
+
+    def member_match(self, member):
+        """"""
+        for key, value in self.match_dict.items():
+            if member in value['members_team_one']:
+                return key, value['channel_team_one']
+            elif member in value['members_team_two']:
+                return key, value['channel_team_two']
+
+    async def cooldown(self, member, match_id):
+        """"""
+        time_delta, unban_time = unbantime(os.environ['DISCORD_LEAGUE_COOLDOWN'])
+        ban_time_str = '' if unban_time is None else f' for {timedelta_str(time_delta)}'
+        await self.bot.db_helper.insert_banned_users(member.guild.id, member.id, unban_time=unban_time)
+        self.disconnected_players.pop(member)
+        # Generate embed and send message
+        embed = self.bot.embed_template(title=translate('banned-player-left', ban_time_str))
+        await member.send(embed=embed)
+
+        if os.environ['DISCORD_LEAGUE_CANCEL_MATCH']:
+            await self.bot.api_helper.end_match(match_id)
+
+
+    @commands.Cog.listener()
+    async def on_voice_state_update(self, member, before, after):
+        """"""
+        if before.channel == after.channel:
+            return
+
+        if not self.team_left_time:
+            return
+
+        try:
+            matchid, team_channel = self.member_match(member)
+        except TypeError:
+            return
+
+        is_live = await self.bot.api_helper.is_match_live(matchid)
+
+        if not is_live:
+            return
+
+        time_delta, unban_time = unbantime(os.environ['DISCORD_LEAGUE_COOLDOWN'])
+        ban_time_str = '' if unban_time is None else f' for {timedelta_str(time_delta)}'
+
+        partial_func = partial(self.cooldown, member, matchid)
+        if before.channel is not None and before.channel == team_channel:
+            self.disconnected_players[member] = Timer(self.team_left_time, partial_func)
+            # Generate embed and send message
+            embed = self.bot.embed_template(title=translate('warning-player-left', ban_time_str, os.environ['DISCORD_LEAGUE_LEFT_TIME']))
+            await member.send(embed=embed)
+
+            if os.environ['DISCORD_LEAGUE_CANCEL_MATCH']:
+                server_msg = translate('player-left-server-msg', member.display_name, os.environ['DISCORD_LEAGUE_LEFT_TIME'])
+                await self.bot.api_helper.send_server_message(matchid, server_msg)
+
+        if after.channel is not None and after.channel == team_channel:
+            try:
+                self.disconnected_players[member].cancel()
+                self.disconnected_players.pop(member)
+            except KeyError:
+                return
+

@@ -46,5 +46,5 @@ steps = [
             ');'
         ),
         'DROP TABLE queued_users;'
-    ),
+    )
 ]

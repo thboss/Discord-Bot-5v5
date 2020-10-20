@@ -130,7 +130,7 @@ class LeagueBot(commands.AutoShardedBot):
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
         print('Creating emojis...')
-        # await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
+        await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
         await self.create_emojis()
         print('Bot is ready!')
 

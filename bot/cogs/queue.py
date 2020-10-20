@@ -3,9 +3,10 @@
 from discord.ext import commands
 from discord.errors import NotFound, HTTPException
 from collections import defaultdict
+from datetime import datetime, timezone
 import asyncio
 
-from bot.helpers.utils import translate
+from bot.helpers.utils import translate, timedelta_str
 
 
 class QueueCog(commands.Cog):
@@ -92,17 +93,26 @@ class QueueCog(commands.Cog):
                     self.bot.db_helper.get_queued_users(after_lobby.category_id),
                     self.bot.db_helper.get_league(after_lobby.category_id),
                     self.bot.db_helper.get_spect_users(after_lobby.category_id),
+                    self.bot.db_helper.get_banned_users(after_lobby.guild.id)
                 ]
                 results = await asyncio.gather(*awaitables, loop=self.bot.loop)
                 player = results[0]
                 queue_ids = results[2]
                 capacity = results[3]['capacity']
                 spect_ids = results[4]
+                banned_users = results[5]
 
-                if member.id in queue_ids:  # Author already in queue
+                if member.id in banned_users:  # Author is banned from joining the queue
+                    title = translate('is-banned', member.display_name)
+                    unban_time = banned_users[member.id]
+
+                    if unban_time is not None:  # If the user is banned for a duration
+                        title += f' for {timedelta_str(unban_time - datetime.now(timezone.utc))}'
+
+                elif member.id in queue_ids:  # Author already in queue
                     title = translate('already-in-queue', member.display_name)
                 elif member.id in spect_ids:  # Player in the spectators
-                    title = f'Unable to add **{member.display_name}**: in the spectators'
+                    title = translate('in-spectators', member.display_name)
                 elif len(queue_ids) >= capacity:  # Queue full
                     title = translate('queue-is-full', member.display_name)
                 elif not player:  # ApiHelper couldn't get player
