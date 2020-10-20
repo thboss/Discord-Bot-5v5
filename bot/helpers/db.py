@@ -83,9 +83,39 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'id')
 
+    async def insert_guilds(self, *guild_ids):
+        """ Add a list of guilds into the guilds table and return the ones successfully added. """
+        insert_rows = [(guild_id,) for guild_id in guild_ids]
+        statement = (
+            'INSERT INTO guilds (id)\n'
+            '    (SELECT id FROM unnest($1::guilds[]))\n'
+            '    ON CONFLICT (id) DO NOTHING\n'
+            '    RETURNING id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                inserted = await connection.fetch(statement, rows)
+
+        return self._get_record_attrs(inserted, 'id')
+
+    async def delete_guilds(self, *guild_ids):
+        """ Remove a list of guilds from the guilds table and return the ones successfully removed. """
+        statement = (
+            'DELETE FROM guilds\n'
+            '    WHERE id::BIGINT = ANY($1::BIGINT[])\n'
+            '    RETURNING id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_ids)
+
+        return self._get_record_attrs(deleted, 'id')
+
     async def sync_guilds(self, *guild_ids):
         """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [tuple([guild_id]) for guild_id in guild_ids]
+        insert_rows = [(guild_id,) for guild_id in guild_ids]
         insert_statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'

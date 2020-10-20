@@ -108,7 +108,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     async def create_emojis(self):
         """ Upload custom map emojis to guilds. """
-        url_path = 'https://raw.githubusercontent.com/thboss/Discord-Bot-5v5/master/assets/maps/icons/'
+        url_path = 'https://raw.githubusercontent.com/thboss/CSGO-PUGs-Bot/master/assets/maps/icons/'
         icons_dic = 'assets/maps/icons/'
         icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
@@ -123,8 +123,12 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.all_maps.append(
-                    Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
+                if not self.all_maps:
+                    self.all_maps.append(Map(
+                        emoji_name,
+                        emoji_dev,
+                        f'<:{emoji_dev}:{emoji.id}>',
+                        f'{url_path}{icon.replace(" ", "%20")}'))
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -133,6 +137,16 @@ class LeagueBot(commands.AutoShardedBot):
         await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
         await self.create_emojis()
         print('Bot is ready!')
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        """ Insert the newly added guild to the guilds table. """
+        await self.db_helper.insert_guilds(guild.id)
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild):
+        """ Delete the recently removed guild from the guilds table. """
+        await self.db_helper.delete_guilds(guild.id)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
