@@ -1,9 +1,31 @@
 # Forked from [csgo-queue-bot](https://github.com/cameronshinn/csgo-queue-bot)
 
+## Description
+- A Discord bot that allows setting up CS:GO PUGs and play with friends with easy setup matches and super smooth.
+
+
+## Features
+- Authenticate player's Discord account with their Steam throght WEB API.
+- Multiple queues per guild.
+- Multiple matches at time.
+- Multiple Servers.
+- Join/Leave the queue based on lobby voice channel.
+- Queue ready up system.
+- Random/Ranked/Volunteer picking captains methods..
+- Random/teambalance/captains picking teams methods.
+- Random/Vote/Veto picking map methods.
+- Add/Remove maps pool.
+- Auto create teams channels.
+- Auto delete teams channels on match end.
+- Force end matches.
+- Rank system.
+
 ## Requirements
 1. [Web API](https://github.com/thboss/csgo-league-web)
 
-2. [Server Plugins](https://github.com/thboss/csgo-league-game)
+2. [Gameserver Plugins](https://github.com/thboss/csgo-league-game)
+
+3. Python3.6+
 
 ## Setup
 1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server before launch the bot.
@@ -89,13 +111,13 @@
 
 ### Admin commands
 
-`q!create <League name>` **-** Create new league <br>
+`q!create <name>` **-** Create a PUG with the given name <br>
 
-`q!delete` **-** Delete the league <br>
+`q!delete` **-** Delete the current PUG <br>
 
 `q!forcelink <mention> <SteamId64>` **-** Force link a player on the backend <br>
 
-`q!unlink <mention>` **-**  Unlink a player on the backend <br>
+`q!unlink <mention>` **-**  Delete the mentioned on the backend <br>
 
 `q!remove <mention>` **-** Remove the mentioned user from the queue <br>
 
@@ -105,13 +127,13 @@
 
 `q!teams <random|autobalance|captains>` **-** Set the team creation method <br>
 
-`q!addspect` **-** Add player to the spectators <br>
-
-`q!removespect` **-** Remove player from the spectators <br>
-
 `q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
 
 `q!maps <random|vote|captains>` **-** Set the map selection method <br>
+
+`q!addspect <mention>` **-** Add the mentioned user to the spectators <br>
+
+`q!removespect <mention>` **-** Remove the mentioned user from the spectators <br>
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
@@ -122,10 +144,10 @@
 
 `q!link` **-**  Link a player on the backend <br>
 
-`q!check` **-** Check if the player has been linked his account and give him role if so <br>
+`q!check` **-** Check if the player has been linked his account and grant him role to access join the lobby voice channel if so <br>
 
-`q!stats` **-** See your stats <br>
+`q!stats` **-** View your stats <br>
 
-`q!leaders` **-** See the top players in the server <br>
+`q!leaders` **-** View the top players in the server <br>
 
 `q!spectators` **-** View the spectators <br>
