@@ -186,6 +186,7 @@ class MatchCog(commands.Cog):
 
         self.ready_message[category] = await text_channel.send(''.join([member.mention for member in members]))
         ready_users = await self.track_ready(self.ready_message[category], members)
+        await asyncio.sleep(1)
         unreadied = set(members) - ready_users
 
         if unreadied:  # Not everyone readied up
@@ -277,11 +278,10 @@ class MatchCog(commands.Cog):
                 else:
                     team2_players = [await self.bot.api_helper.get_player(team_two[0].id)]
 
-                match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
                 description = translate('server-connect', match.connect_url, match.connect_command)
                 burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
-                burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
+                burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match.match_page)
                 burst_embed.set_thumbnail(url=map_pick.image_url)
                 
                 burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
