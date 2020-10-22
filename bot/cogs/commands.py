@@ -26,7 +26,7 @@ class CommandsCog(commands.Cog):
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}create <League name>`'
         else:
             category = await ctx.guild.create_category_channel(name=args)
-            await self.bot.db_helper.insert_leagues(category.id)
+            await self.bot.db_helper.insert_pugs(category.id)
             everyone_role = get(ctx.guild.roles, name='@everyone')
             pug_role = await ctx.guild.create_role(name=f'{args}_linked')
             text_channel_queue = await ctx.guild.create_text_channel(name=f'{args}_queue', category=category)
@@ -60,7 +60,7 @@ class CommandsCog(commands.Cog):
         except NotFound:
             pass
 
-        await self.bot.db_helper.delete_leagues(ctx.channel.category_id)
+        await self.bot.db_helper.delete_pugs(ctx.channel.category_id)
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()
 

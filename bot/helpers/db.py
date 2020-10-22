@@ -53,12 +53,12 @@ class DBHelper:
 
         return {col: val for rec in updated_vals for col, val in rec.items()}
 
-    async def insert_leagues(self, *league_ids):
-        """ Add a list of leagues into the leagues table and return the ones successfully added. """
+    async def insert_pugs(self, *league_ids):
+        """ Add a list of pugs into the pugs table and return the ones successfully added. """
         rows = [tuple([league_id] + [None] * 10 + [None] * len(maps)) for league_id in league_ids]
         statement = (
-            'INSERT INTO leagues (id)\n'
-            '    (SELECT id FROM unnest($1::leagues[]))\n'
+            'INSERT INTO pugs (id)\n'
+            '    (SELECT id FROM unnest($1::pugs[]))\n'
             '    ON CONFLICT (id) DO NOTHING\n'
             '    RETURNING id;'
         )
@@ -69,10 +69,10 @@ class DBHelper:
 
         return self._get_record_attrs(inserted, 'id')
 
-    async def delete_leagues(self, *league_ids):
-        """ Remove a list of leagues from the leagues table and return the ones successfully removed. """
+    async def delete_pugs(self, *league_ids):
+        """ Remove a list of pugs from the pugs table and return the ones successfully removed. """
         statement = (
-            'DELETE FROM leagues\n'
+            'DELETE FROM pugs\n'
             '    WHERE id::BIGINT = ANY($1::BIGINT[])\n'
             '    RETURNING id;'
         )
@@ -319,12 +319,12 @@ class DBHelper:
         return self._get_record_attrs(deleted, 'user_id')
 
     async def get_league(self, league_id):
-        """ Get a guild's row from the leagues table. """
-        return await self._get_row('leagues', league_id)
+        """ Get a guild's row from the pugs table. """
+        return await self._get_row('pugs', league_id)
 
     async def update_league(self, league_id, **data):
-        """ Update a guild's row in the leagues table. """
-        return await self._update_row('leagues', league_id, **data)
+        """ Update a guild's row in the pugs table. """
+        return await self._update_row('pugs', league_id, **data)
 
     async def get_guild(self, guild_id):
         """ Get a guild's row from the guilds table. """
