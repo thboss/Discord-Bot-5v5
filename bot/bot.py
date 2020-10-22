@@ -24,7 +24,7 @@ INTENTS_JSON = os.path.join(_CWD, 'intents.json')
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
-    def __init__(self, discord_token, api_base_url, api_key, db_pool):
+    def __init__(self, discord_token, api_base_url, api_key, db_connect_url):
         """ Set attributes and configure bot. """
         # Call parent init
         with open(INTENTS_JSON) as f:
@@ -37,7 +37,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.discord_token = discord_token
         self.api_base_url = api_base_url
         self.api_key = api_key
-        self.db_pool = db_pool
+        self.db_connect_url = db_connect_url
         self.all_maps = {}
 
         # Set constants
@@ -45,12 +45,13 @@ class LeagueBot(commands.AutoShardedBot):
         self.activity = discord.Activity(type=discord.ActivityType.watching, name="CS:GO League")
 
         # Create session for API
-        self.session = aiohttp.ClientSession(loop=self.loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
-                                             raise_for_status=True)
-        self.api_helper = helpers.ApiHelper(self.session, self.api_base_url, self.api_key)
+        self.api_helper = helpers.ApiHelper(self.loop, self.api_base_url, self.api_key)
 
         # Create DB helper to use connection pool
-        self.db_helper = helpers.DBHelper(self.db_pool)
+        self.db_helper = helpers.DBHelper(self.db_connect_url)
+
+        # Create DB helper to use connection pool
+        self.db_helper = helpers.DBHelper(self.db_connect_url)
 
         # Initialize set of errors to ignore
         self.ignore_error_types = set()
@@ -150,5 +151,5 @@ class LeagueBot(commands.AutoShardedBot):
     async def close(self):
         """ Override parent close to close the API session also. """
         await super().close()
-        await self.session.close()
-        await self.db_pool.close()
+        await self.api_helper.close()
+        await self.db_helper.close()
