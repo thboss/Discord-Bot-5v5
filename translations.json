@@ -147,7 +147,11 @@
         "unbanned-footer":      "Unbanned users may now join the queue",        
         "warning-player-left":  "Warning: You will banned from join queues {} if you don't rejoin you team channel.",
         "banned-player-left":   "You have been banned from join queues {} because of left your team channel while match is live.",
-        "player-left-server-msg":"Player {} just left his team channel,this match will cancel after {} minutes if he didn't rejoin."
+        "player-left-server-msg":"Player {} just left his team channel,this match will cancel after {} minutes if he didn't rejoin.",
+        "command-not-valid":    "command **```{}```** is not valid!",
+        "did-you-mean":         "Did you mean",
+        "use-help":             "Use `{}help` for a list of commands",
+        "league-commands":      "__CS:GO League Bot Commands__"
     },
     "ru": {
         "create-league":        "Лига **{}** успешно создана",

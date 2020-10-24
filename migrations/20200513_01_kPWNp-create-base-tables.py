@@ -15,7 +15,7 @@ steps = [
     ),
     step(
         (
-            'CREATE TABLE leagues(\n'
+            'CREATE TABLE pugs(\n'
             '    id BIGSERIAL PRIMARY KEY,\n'
             '    capacity SMALLINT DEFAULT 10,\n'
             '    team_method team_method DEFAULT \'captains\',\n'
@@ -27,7 +27,7 @@ steps = [
             '    voice_lobby BIGINT DEFAULT NULL\n'
             ');'
         ),
-        'DROP TABLE leagues;'
+        'DROP TABLE pugs;'
     ),
     step(
         (
@@ -40,7 +40,7 @@ steps = [
     step(
         (
             'CREATE TABLE queued_users(\n'
-            '    guild_id BIGSERIAL REFERENCES leagues (id) ON DELETE CASCADE,\n'
+            '    guild_id BIGSERIAL REFERENCES pugs (id) ON DELETE CASCADE,\n'
             '    user_id BIGSERIAL REFERENCES users (id),\n'
             '    CONSTRAINT queued_user_pkey PRIMARY KEY (guild_id, user_id)\n'
             ');'

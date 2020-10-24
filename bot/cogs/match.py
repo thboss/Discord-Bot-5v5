@@ -132,7 +132,7 @@ class MatchCog(commands.Cog):
                                      'members_team_one': members_team_one,
                                      'members_team_two': members_team_two}
 
-        lobby_id = await self.bot.get_league_data(league_category, 'voice_lobby')
+        lobby_id = await self.bot.get_pug_data(league_category, 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
 
         # move members into thier team channels
@@ -153,9 +153,9 @@ class MatchCog(commands.Cog):
     async def delete_match_channels(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
 
-        lobby_id = await self.bot.get_league_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
+        lobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
-        prelobby_id = await self.bot.get_league_data(self.match_dict[matchid]['league_category'], 'voice_prelobby')
+        prelobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_prelobby')
         prelobby = self.bot.get_channel(prelobby_id)
         match_players = self.match_dict[matchid]['members_team_one'] + self.match_dict[matchid]['members_team_two']
 
@@ -177,7 +177,7 @@ class MatchCog(commands.Cog):
 
         queue_cog = self.bot.get_cog('QueueCog')
         msg = queue_cog.last_queue_msgs.get(category)
-        channel_id = await self.bot.get_league_data(category, 'text_queue')
+        channel_id = await self.bot.get_pug_data(category, 'text_queue')
         text_channel = category.guild.get_channel(channel_id)
 
         if msg is not None:
@@ -197,7 +197,7 @@ class MatchCog(commands.Cog):
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
-            prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+            prelobby_id = await self.bot.get_pug_data(category, 'voice_prelobby')
             prelobby = category.guild.get_channel(prelobby_id)
             title = translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
@@ -215,7 +215,7 @@ class MatchCog(commands.Cog):
             # Attempt to make teams and start match
             awaitables = [
                 self.ready_message[category].clear_reactions(),
-                self.bot.db_helper.get_league(category.id)
+                self.bot.db_helper.get_pug(category.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
 
@@ -238,7 +238,7 @@ class MatchCog(commands.Cog):
             spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
-            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_league_data(category, m.dev_name)]
+            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
 
             if map_method == 'captains':
                 map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
@@ -253,7 +253,7 @@ class MatchCog(commands.Cog):
             burst_embed = self.bot.embed_template(description=translate('fetching-server'))
             await self.ready_message[category].edit(content='', embed=burst_embed)
 
-            region = await self.bot.get_league_data(category, 'region')
+            region = await self.bot.get_pug_data(category, 'region')
 
             # Check if able to get a match server and edit message embed accordingly
             try:
@@ -311,10 +311,14 @@ class MatchCog(commands.Cog):
         ban_time_str = '' if unban_time is None else f' for {timedelta_str(time_delta)}'
         await self.bot.db_helper.insert_banned_users(member.guild.id, member.id, unban_time=unban_time)
         self.disconnected_players.pop(member)
+        # Add banned role
+        ban_role_id = await self.bot.db_helper.get_guild(member.guild.id)
+        ban_role = member.guild.get_role(ban_role_id['ban_role'])
+        await member.add_roles(ban_role)
         # Generate embed and send message
         embed = self.bot.embed_template(title=translate('banned-player-left', ban_time_str))
         await member.send(embed=embed)
-
+        # Force end the match
         if os.environ['DISCORD_LEAGUE_CANCEL_MATCH']:
             await self.bot.api_helper.end_match(match_id)
 

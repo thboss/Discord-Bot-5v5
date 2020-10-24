@@ -191,7 +191,7 @@ class TeamDraftMenu(discord.Message):
         self.members_left = self.members.copy()  # Copy members to edit players remaining in the player pool
         self.teams = [[], []]
         self.pick_number = 0
-        captain_method = await self.bot.get_league_data(self.channel.category, 'captain_method')
+        captain_method = await self.bot.get_pug_data(self.channel.category, 'captain_method')
 
         if captain_method == 'rank':
             players = await self.bot.api_helper.get_players([member.id for member in self.members_left])

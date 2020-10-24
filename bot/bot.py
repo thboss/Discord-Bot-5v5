@@ -50,9 +50,6 @@ class LeagueBot(commands.AutoShardedBot):
         # Create DB helper to use connection pool
         self.db_helper = helpers.DBHelper(self.db_connect_url)
 
-        # Create DB helper to use connection pool
-        self.db_helper = helpers.DBHelper(self.db_connect_url)
-
         # Initialize set of errors to ignore
         self.ignore_error_types = set()
 
@@ -78,16 +75,18 @@ class LeagueBot(commands.AutoShardedBot):
         kwargs['color'] = self.color
         return discord.Embed(**kwargs)
 
-    async def get_league_data(self, category, data):
-        guild_data = await self.db_helper.get_league(category.id)
+    async def get_pug_data(self, category, data):
+        """"""
+        guild_data = await self.db_helper.get_pug(category.id)
         try:
             return guild_data[data]
         except KeyError:
             return None
 
     async def isValidChannel(self, ctx):
+        """"""
         try:
-            channel_id = await self.get_league_data(ctx.channel.category, 'text_commands')
+            channel_id = await self.get_pug_data(ctx.channel.category, 'text_commands')
         except AttributeError:
             channel_id = None
         commands_channel = self.get_channel(channel_id)
@@ -118,12 +117,22 @@ class LeagueBot(commands.AutoShardedBot):
                                                      f'<:{emoji_dev}:{emoji.id}>',
                                                      f'{url_path}{icon.replace(" ", "%20")}')
 
+    async def create_ban_role(self, guilds):
+        """"""
+        for guild in guilds:
+            ban_role = await self.db_helper.get_guild(guild.id)
+            ban_role_id = ban_role['ban_role']
+            if not ban_role_id or not get(guild.roles, id=ban_role_id):
+                role = await guild.create_role(name='pugs_banned')
+                await self.db_helper.update_guild(guild.id, ban_role=role.id)
+
     @commands.Cog.listener()
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
-        print('Creating emojis...')
         await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
+        print('Creating emojis...')
         await self.create_emojis()
+        await self.create_ban_role(self.guilds)
         print('Bot is ready!')
 
     @commands.Cog.listener()
@@ -131,6 +140,7 @@ class LeagueBot(commands.AutoShardedBot):
         """ Insert the newly added guild to the guilds table. """
         await self.db_helper.insert_guilds(guild.id)
         await self.create_emojis()
+        await self.create_ban_role([guild])
 
     @commands.Cog.listener()
     async def on_guild_remove(self, guild):
@@ -153,3 +163,4 @@ class LeagueBot(commands.AutoShardedBot):
         await super().close()
         await self.api_helper.close()
         await self.db_helper.close()
+        self.scheduler.shutdown(wait=False)

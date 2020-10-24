@@ -60,9 +60,9 @@ class DBHelper:
 
         return {col: val for rec in updated_vals for col, val in rec.items()}
 
-    async def insert_pugs(self, *league_ids):
+    async def insert_pugs(self, *pug_ids):
         """ Add a list of pugs into the pugs table and return the ones successfully added. """
-        rows = [tuple([league_id] + [None] * 10 + [None] * len(maps)) for league_id in league_ids]
+        rows = [tuple([pug_id] + [None] * 10 + [None] * len(maps)) for pug_id in pug_ids]
         statement = (
             'INSERT INTO pugs (id)\n'
             '    (SELECT id FROM unnest($1::pugs[]))\n'
@@ -76,7 +76,7 @@ class DBHelper:
 
         return self._get_record_attrs(inserted, 'id')
 
-    async def delete_pugs(self, *league_ids):
+    async def delete_pugs(self, *pug_ids):
         """ Remove a list of pugs from the pugs table and return the ones successfully removed. """
         statement = (
             'DELETE FROM pugs\n'
@@ -86,7 +86,7 @@ class DBHelper:
 
         async with self.pool.acquire() as connection:
             async with connection.transaction():
-                deleted = await connection.fetch(statement, league_ids)
+                deleted = await connection.fetch(statement, pug_ids)
 
         return self._get_record_attrs(deleted, 'id')
 
@@ -122,7 +122,7 @@ class DBHelper:
 
     async def sync_guilds(self, *guild_ids):
         """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [(guild_id,) for guild_id in guild_ids]
+        insert_rows = [(guild_id, None) for guild_id in guild_ids]
         insert_statement = (
             'INSERT INTO guilds (id)\n'
             '    (SELECT id FROM unnest($1::guilds[]))\n'
@@ -226,10 +226,6 @@ class DBHelper:
 
     async def get_banned_users(self, guild_id):
         """ Get all the banned users of the guild from the banned_users table. """
-        delete_statement = (
-            'DELETE FROM banned_users\n'
-            '    WHERE guild_id = $1 AND CURRENT_TIMESTAMP > unban_time;'
-        )
         select_statement = (
             'SELECT * FROM banned_users\n'
             '    WHERE guild_id = $1;'
@@ -237,12 +233,23 @@ class DBHelper:
 
         async with self.pool.acquire() as connection:
             async with connection.transaction():
-                await connection.execute(delete_statement, guild_id)
-
-            async with connection.transaction():
                 queue = await connection.fetch(select_statement, guild_id)
 
         return dict(zip(self._get_record_attrs(queue, 'user_id'), self._get_record_attrs(queue, 'unban_time')))
+
+    async def get_unbanned_users(self, guild_id):
+        """ Get all the banned users of the guild from the banned_users table. """
+        delete_statement = (
+            'DELETE FROM banned_users\n'
+            '    WHERE guild_id = $1 AND CURRENT_TIMESTAMP > unban_time\n'
+            '    RETURNING user_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(delete_statement, guild_id)
+
+        return self._get_record_attrs(deleted, 'user_id')
 
     async def insert_banned_users(self, guild_id, *user_ids, unban_time=None):
         """ Insert multiple users of a guild into the banned_users table"""
@@ -325,13 +332,13 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'user_id')
 
-    async def get_league(self, league_id):
-        """ Get a guild's row from the pugs table. """
-        return await self._get_row('pugs', league_id)
+    async def get_pug(self, pug_id):
+        """ Get a pug's row from the pugs table. """
+        return await self._get_row('pugs', pug_id)
 
-    async def update_league(self, league_id, **data):
-        """ Update a guild's row in the pugs table. """
-        return await self._update_row('pugs', league_id, **data)
+    async def update_pug(self, pug_id, **data):
+        """ Update a pug's row in the pugs table. """
+        return await self._update_row('pugs', pug_id, **data)
 
     async def get_guild(self, guild_id):
         """ Get a guild's row from the guilds table. """

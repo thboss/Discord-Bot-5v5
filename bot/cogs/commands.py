@@ -16,14 +16,14 @@ class CommandsCog(commands.Cog):
         self.match_cog = self.bot.get_cog('MatchCog')
         self.queue_cog = self.bot.get_cog('QueueCog')
 
-    @commands.command(usage='create <league name>',
+    @commands.command(usage='create <name>',
                       brief=translate('command-create-brief'))
     @commands.has_permissions(administrator=True)
     async def create(self, ctx, *args):
         args = ' '.join(arg for arg in args)
 
         if not len(args):
-            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}create <League name>`'
+            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}create <name>`'
         else:
             category = await ctx.guild.create_category_channel(name=args)
             await self.bot.db_helper.insert_pugs(category.id)
@@ -34,11 +34,11 @@ class CommandsCog(commands.Cog):
             voice_channel_lobby = await ctx.guild.create_voice_channel(name=f'{args} Lobby', category=category,
                                                                        user_limit=10)
             voice_channel_prelobby = await ctx.guild.create_voice_channel(name=f'{args} Pre-Lobby', category=category)
-            await self.bot.db_helper.update_league(category.id, pug_role=pug_role.id)
-            await self.bot.db_helper.update_league(category.id, text_queue=text_channel_queue.id)
-            await self.bot.db_helper.update_league(category.id, text_commands=text_channel_commands.id)
-            await self.bot.db_helper.update_league(category.id, voice_lobby=voice_channel_lobby.id)
-            await self.bot.db_helper.update_league(category.id, voice_prelobby=voice_channel_prelobby.id)
+            await self.bot.db_helper.update_pug(category.id, pug_role=pug_role.id)
+            await self.bot.db_helper.update_pug(category.id, text_queue=text_channel_queue.id)
+            await self.bot.db_helper.update_pug(category.id, text_commands=text_channel_commands.id)
+            await self.bot.db_helper.update_pug(category.id, voice_lobby=voice_channel_lobby.id)
+            await self.bot.db_helper.update_pug(category.id, voice_prelobby=voice_channel_prelobby.id)
             await text_channel_queue.set_permissions(everyone_role, send_messages=False)
             await voice_channel_lobby.set_permissions(everyone_role, connect=False)
             await voice_channel_lobby.set_permissions(pug_role, connect=True)
@@ -53,7 +53,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        pug_role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+        pug_role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
         pug_role = ctx.guild.get_role(pug_role_id)
         try:
             await pug_role.delete()
@@ -110,7 +110,7 @@ class CommandsCog(commands.Cog):
                 title = 'Sorry! Steam ID is already linked with another discord'
             else:
                 title = translate('force-linked', user.display_name, args[1])
-                role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+                role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
                 role = ctx.guild.get_role(role_id)
                 await user.add_roles(role)
                 await self.bot.api_helper.update_discord_name(user)
@@ -138,7 +138,7 @@ class CommandsCog(commands.Cog):
             else:
                 await self.bot.api_helper.unlink_discord(user)
                 title = translate('unlinked')
-                role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+                role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
                 role = ctx.guild.get_role(role_id)
                 await user.remove_roles(role)
 
@@ -153,7 +153,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.api_helper.is_linked(ctx.author.id):
             msg = translate('discord-not-linked')
         else:
-            role_id = await self.bot.get_league_data(ctx.channel.category, 'pug_role')
+            role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
             role = ctx.guild.get_role(role_id)
             await ctx.author.add_roles(role)
             await self.bot.api_helper.update_discord_name(ctx.author)
@@ -185,8 +185,8 @@ class CommandsCog(commands.Cog):
 
             embed = await self.queue_cog.queue_embed(ctx.channel.category, title)
 
-            lobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
-            prelobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_prelobby')
+            lobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_lobby')
+            prelobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_prelobby')
             lobby = ctx.bot.get_channel(lobby_id)
             prelobby = ctx.bot.get_channel(prelobby_id)
 
@@ -201,7 +201,7 @@ class CommandsCog(commands.Cog):
     @commands.command(brief=translate('command-empty-brief'))
     @commands.has_permissions(kick_members=True)
     async def empty(self, ctx):
-        """ Reset the league queue list to empty. """
+        """ Reset the pug's queue list to empty. """
         if not await self.bot.isValidChannel(ctx):
             return
 
@@ -210,8 +210,8 @@ class CommandsCog(commands.Cog):
         msg = translate('queue-emptied')
         embed = await self.queue_cog.queue_embed(ctx.channel.category, msg)
 
-        lobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
-        prelobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_prelobby')
+        lobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_lobby')
+        prelobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_prelobby')
         lobby = ctx.bot.get_channel(lobby_id)
         prelobby = ctx.bot.get_channel(prelobby_id)
 
@@ -232,7 +232,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        capacity = await self.bot.get_league_data(ctx.channel.category, 'capacity')
+        capacity = await self.bot.get_pug_data(ctx.channel.category, 'capacity')
 
         try:
             new_cap = int(args[0])
@@ -246,14 +246,14 @@ class CommandsCog(commands.Cog):
             else:
                 self.queue_cog.block_lobby[ctx.channel.category] = True
                 await self.bot.db_helper.delete_all_queued_users(ctx.channel.category_id)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, capacity=new_cap)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, capacity=new_cap)
                 embed = await self.queue_cog.queue_embed(ctx.channel.category, translate('queue-emptied'))
                 embed.set_footer(text=translate('queue-emptied-footer'))
                 await self.queue_cog.update_last_msg(ctx.channel.category, embed)
                 msg = translate('set-capacity', new_cap)
 
-                lobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_lobby')
-                prelobby_id = await self.bot.get_league_data(ctx.channel.category, 'voice_prelobby')
+                lobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_lobby')
+                prelobby_id = await self.bot.get_pug_data(ctx.channel.category, 'voice_prelobby')
                 lobby = ctx.bot.get_channel(lobby_id)
                 prelobby = ctx.bot.get_channel(prelobby_id)
 
@@ -337,7 +337,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        team_method = await self.bot.get_league_data(ctx.channel.category, 'team_method')
+        team_method = await self.bot.get_pug_data(ctx.channel.category, 'team_method')
         valid_methods = ['captains', 'autobalance', 'random']
 
         if method is None:
@@ -349,7 +349,7 @@ class CommandsCog(commands.Cog):
                 title = translate('team-method-already', team_method)
             elif method in valid_methods:
                 title = translate('set-team-method', method)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, team_method=method)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, team_method=method)
             else:
                 title = translate('team-valid-methods', valid_methods[0], valid_methods[1], valid_methods[2])
 
@@ -364,7 +364,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        guild_data = await self.bot.db_helper.get_league(ctx.channel.category_id)
+        guild_data = await self.bot.db_helper.get_pug(ctx.channel.category_id)
         captain_method = guild_data['captain_method']
         valid_methods = ['volunteer', 'rank', 'random']
 
@@ -377,7 +377,7 @@ class CommandsCog(commands.Cog):
                 title = translate('captains-method-already', captain_method)
             elif method in valid_methods:
                 title = translate('set-captains-method', method)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, captain_method=method)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, captain_method=method)
             else:
                 title = translate('captains-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
 
@@ -392,7 +392,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        map_method = await self.bot.get_league_data(ctx.channel.category, 'map_method')
+        map_method = await self.bot.get_pug_data(ctx.channel.category, 'map_method')
         valid_methods = ['captains', 'vote', 'random']
 
         if method is None:
@@ -404,7 +404,7 @@ class CommandsCog(commands.Cog):
                 title = translate('map-method-already', map_method)
             elif method in valid_methods:
                 title = translate('set-map-method', method)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, map_method=method)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, map_method=method)
             else:
                 title = translate('map-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
 
@@ -420,7 +420,7 @@ class CommandsCog(commands.Cog):
             return
 
         map_pool = [m.dev_name for m in self.bot.all_maps.values() if
-                    await self.bot.get_league_data(ctx.channel.category, m.dev_name)]
+                    await self.bot.get_pug_data(ctx.channel.category, m.dev_name)]
 
         if len(args) == 0:
             embed = self.bot.embed_template(title=translate('map-pool'))
@@ -450,7 +450,7 @@ class CommandsCog(commands.Cog):
                 description = translate('map-pool-fewer-3')
             else:
                 map_pool_data = {m.dev_name: m.dev_name in map_pool for m in self.bot.all_maps.values()}
-                await self.bot.db_helper.update_league(ctx.channel.category_id, **map_pool_data)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, **map_pool_data)
 
             embed = self.bot.embed_template(title=translate('modified-map-pool'), description=description)
 
@@ -566,7 +566,7 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title, description=description)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='region {ASIA|EU}',
+    @commands.command(usage='region <server region>',
                       brief=translate('command-region-brief'))
     @commands.has_permissions(administrator=True)
     async def region(self, ctx, region=None):
@@ -574,7 +574,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.isValidChannel(ctx):
             return
 
-        cur_region = await self.bot.get_league_data(ctx.channel.category, 'region')
+        cur_region = await self.bot.get_pug_data(ctx.channel.category, 'region')
         valid_regions = os.environ['DISCORD_LEAGUE_REGIONS'].replace(' ', '').split(',')
 
         if region is None:
@@ -586,7 +586,7 @@ class CommandsCog(commands.Cog):
                 title = translate('region-already', region)
             elif region in valid_regions:
                 title = translate('set-region', region)
-                await self.bot.db_helper.update_league(ctx.channel.category_id, region=region)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, region=region)
             else:
                 title = translate('region-valid') + ', '.join(map(str, valid_regions))
 
@@ -609,6 +609,10 @@ class CommandsCog(commands.Cog):
         # Get user IDs to ban from mentions and insert them into ban table
         user_ids = [user.id for user in ctx.message.mentions]
         await self.bot.db_helper.insert_banned_users(ctx.guild.id, *user_ids, unban_time=unban_time)
+        ban_role_id = await self.bot.db_helper.get_guild(ctx.guild.id)
+        ban_role = ctx.guild.get_role(ban_role_id['ban_role'])
+        for user in ctx.message.mentions:
+            await user.add_roles(ban_role)
 
         # Generate embed and send message
         banned_users_str = ', '.join(f'**{user.display_name}**' for user in ctx.message.mentions)
@@ -633,7 +637,7 @@ class CommandsCog(commands.Cog):
         unbanned_ids = await self.bot.db_helper.delete_banned_users(ctx.guild.id, *user_ids)
 
         # Generate embed and send message
-        unbanned_users = [user for user in ctx.message.mentions if user.id in unbanned_ids]
+        unbanned_users = [user for user in ctx.message.mentions if user.id in unbanned_ids]        
         never_banned_users = [user for user in ctx.message.mentions if user.id not in unbanned_ids]
         unbanned_users_str = ', '.join(f'**{user.display_name}**' for user in unbanned_users)
         never_banned_users_str = ', '.join(f'**{user.display_name}**' for user in never_banned_users)
@@ -643,6 +647,11 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=f'Unbanned {title_1}{title_2}')
         embed.set_footer(text=translate('unbanned-footer'))
         await ctx.send(embed=embed)
+
+        ban_role_id = await self.bot.db_helper.get_guild(ctx.guild.id)
+        ban_role = ctx.guild.get_role(ban_role_id['ban_role'])
+        for user in unbanned_users:
+            await user.remove_roles(ban_role)
 
     @remove.error
     @empty.error
