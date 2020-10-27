@@ -239,8 +239,9 @@ class MatchCog(commands.Cog):
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
             mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
+            count_maps = await self.bot.get_pug_data(category, 'count_maps')
 
-            if map_method == 'captains':
+            if map_method == 'captains' or count_maps > 1:
                 map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)
@@ -257,7 +258,7 @@ class MatchCog(commands.Cog):
 
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, map_pick.dev_name, region)
+                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, [m.dev_name for m in map_pick], region)
             except aiohttp.ClientResponseError as e:
                 description = translate('no-servers')
                 burst_embed = self.bot.embed_template(title=translate('problem'), description=description)
@@ -282,7 +283,7 @@ class MatchCog(commands.Cog):
                 burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
                 burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match.match_page)
-                burst_embed.set_thumbnail(url=map_pick.image_url)
+                burst_embed.set_thumbnail(url=map_pick[0].image_url)
                 
                 burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team1_players[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))

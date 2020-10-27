@@ -62,7 +62,7 @@ class DBHelper:
 
     async def insert_pugs(self, *pug_ids):
         """ Add a list of pugs into the pugs table and return the ones successfully added. """
-        rows = [tuple([pug_id] + [None] * 10 + [None] * len(maps)) for pug_id in pug_ids]
+        rows = [tuple([pug_id] + [None] * 11 + [None] * len(maps)) for pug_id in pug_ids]
         statement = (
             'INSERT INTO pugs (id)\n'
             '    (SELECT id FROM unnest($1::pugs[]))\n'

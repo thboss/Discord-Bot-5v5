@@ -132,10 +132,12 @@
         "command-leaders-brief":"See the top players in the server",
         "command-help-brief":   "Display the help menu",
         "command-about-brief":  "Display basic info about this bot",
-        "command-forcelink-brief": "Force link player with steam id (must have admin perms)",
+        "command-forcelink-brief": "Force link a player with a steam id (must have admin perms)",
         "command-region-brief": "Set or view the server region (must have admin perms)",
         "command-ban-brief":    "Ban all mentioned users from joining the queue (need server ban perms)",
-        "command-unban-brief": "Unban all mentioned users so they can join the queue (need server ban perms)",
+        "command-unban-brief":  "Unban all mentioned users so they can join the queue (need server ban perms)",
+        "command-cancel-brief": "Force cancel the current match setup",
+        "command-countmaps-brief":"Set count maps for matches",
         "bot-description":      "An easy to use, fully automated system to set up and play CS:GO pickup games",
         "current-region":       "Current server region is {}",
         "region-already":       "Server region already set to {}",
@@ -151,7 +153,11 @@
         "command-not-valid":    "command **```{}```** is not valid!",
         "did-you-mean":         "Did you mean",
         "use-help":             "Use `{}help` for a list of commands",
-        "league-commands":      "__CS:GO League Bot Commands__"
+        "league-commands":      "__CS:GO League Bot Commands__",
+        "current-count-maps":   "Current matches' count maps is {}",
+        "count-maps-already":   "Matches' count maps already set to {}",
+        "set-count-maps":       "Matches' count maps successfully set to {}",
+        "count-maps-out-range": "Matches' count maps is outside of valid range (1-5)"
     },
     "ru": {
         "create-league":        "Лига **{}** успешно создана",

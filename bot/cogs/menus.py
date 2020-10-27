@@ -308,9 +308,10 @@ class MapDraftMenu(discord.Message):
         self.ban_number += 1
 
         await self._update_menu(translate('user-banned-map', member.display_name, map_ban.name))
+        count_maps = await self.bot.get_pug_data(self.channel.category, 'count_maps')
 
         # Check if the draft is over
-        if len(self.maps_left) == 1:
+        if len(self.maps_left) == count_maps:
             if self.future is not None:
                 self.future.set_result(None)
 
@@ -338,15 +339,7 @@ class MapDraftMenu(discord.Message):
         self.bot.remove_listener(self._process_ban, name='on_reaction_add')
         await self.clear_reactions()
 
-        # Return class to original state after map drafting is done
-        map_pick = list(self.maps_left.values())[0]  # Get map pick before setting self.maps_left to None
-        self.captains = None
-        self.map_pool = None
-        self.maps_left = None
-        self.ban_number = None
-        self.future = None
-
-        return map_pick
+        return list(self.maps_left.values())
 
 
 class ReadyMenu(discord.Message):

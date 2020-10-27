@@ -83,7 +83,7 @@ class LeagueBot(commands.AutoShardedBot):
         except KeyError:
             return None
 
-    async def isValidChannel(self, ctx):
+    async def is_pug_channel(self, ctx):
         """"""
         try:
             channel_id = await self.get_pug_data(ctx.channel.category, 'text_commands')
@@ -123,8 +123,11 @@ class LeagueBot(commands.AutoShardedBot):
             ban_role = await self.db_helper.get_guild(guild.id)
             ban_role_id = ban_role['ban_role']
             if not ban_role_id or not get(guild.roles, id=ban_role_id):
-                role = await guild.create_role(name='pugs_banned')
-                await self.db_helper.update_guild(guild.id, ban_role=role.id)
+                try:
+                    role = await guild.create_role(name='pugs_banned')
+                    await self.db_helper.update_guild(guild.id, ban_role=role.id)
+                except discord.errors.Forbidden:
+                    pass
 
     @commands.Cog.listener()
     async def on_ready(self):
