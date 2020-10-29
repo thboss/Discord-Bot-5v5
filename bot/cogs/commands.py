@@ -384,33 +384,6 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='maps [{captains|vote|random}]',
-                      brief=translate('command-maps-brief'))
-    @commands.has_permissions(administrator=True)
-    async def pickmaps(self, ctx, method=None):
-        """ Set or display the method by which the teams are created. """
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        map_method = await self.bot.get_pug_data(ctx.channel.category, 'map_method')
-        valid_methods = ['captains', 'vote', 'random']
-
-        if method is None:
-            title = translate('map-method', map_method)
-        else:
-            method = method.lower()
-
-            if method == map_method:
-                title = translate('map-method-already', map_method)
-            elif method in valid_methods:
-                title = translate('set-map-method', method)
-                await self.bot.db_helper.update_pug(ctx.channel.category_id, map_method=method)
-            else:
-                title = translate('map-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
-
-        embed = self.bot.embed_template(title=title)
-        await ctx.send(embed=embed)
-
     @commands.command(usage='mpool {+|-}<map name> ...',
                       brief=translate('command-mpool-brief'))
     @commands.has_permissions(administrator=True)
@@ -466,6 +439,58 @@ class CommandsCog(commands.Cog):
         embed.add_field(name=f'__{translate("active-maps")}__', value=active_maps)
         embed.add_field(name=f'__{translate("inactive-maps")}__', value=inactive_maps)
         await ctx.send(embed=embed)
+
+    @commands.command(usage='maps [{captains|vote|random}]',
+                      brief=translate('command-maps-brief'))
+    @commands.has_permissions(administrator=True)
+    async def pickmaps(self, ctx, method=None):
+        """ Set or display the method by which the teams are created. """
+        if not await self.bot.is_pug_channel(ctx):
+            return
+
+        map_method = await self.bot.get_pug_data(ctx.channel.category, 'map_method')
+        valid_methods = ['captains', 'vote', 'random']
+
+        if method is None:
+            title = translate('map-method', map_method)
+        else:
+            method = method.lower()
+
+            if method == map_method:
+                title = translate('map-method-already', map_method)
+            elif method in valid_methods:
+                title = translate('set-map-method', method)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, map_method=method)
+            else:
+                title = translate('map-valid-method', valid_methods[0], valid_methods[1], valid_methods[2])
+
+        embed = self.bot.embed_template(title=title)
+        await ctx.send(embed=embed)
+
+    @commands.command(usage='countmaps <number>',
+                      brief=translate('command-countmaps-brief'))
+    @commands.has_permissions(administrator=True)
+    async def countmaps(self, ctx, *args):
+        """"""
+        if not await self.bot.is_pug_channel(ctx):
+            return
+
+        current = await self.bot.get_pug_data(ctx.channel.category, 'count_maps')
+
+        try:
+            new_count = int(args[0])
+        except (IndexError, ValueError):
+            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}countmaps <number>`'
+        else:
+            if new_count == current:
+                msg = translate('count-maps-already', current)
+            elif new_count < 1 or new_count > 5:
+                msg = translate('count-maps-out-range')
+            else:
+                msg = translate('set-count-maps', new_count)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, count_maps=new_count)
+
+        await ctx.send(embed=self.bot.embed_template(title=msg))
 
     @commands.command(usage='end [match id]',
                       brief=translate('command-end-brief'))
@@ -690,31 +715,6 @@ class CommandsCog(commands.Cog):
         self.queue_cog.block_lobby[ctx.channel.category] = False
     '''
 
-    @commands.command(usage='countmaps <number>',
-                      brief=translate('command-countmaps-brief'))
-    @commands.has_permissions(administrator=True)
-    async def countmaps(self, ctx, *args):
-        """"""
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        current = await self.bot.get_pug_data(ctx.channel.category, 'count_maps')
-
-        try:
-            new_count = int(args[0])
-        except (IndexError, ValueError):
-            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}countmaps <number>`'
-        else:
-            if new_count == current:
-                msg = translate('count-maps-already', current)
-            elif new_count < 1 or new_count > 5:
-                msg = translate('count-maps-out-range')
-            else:
-                msg = translate('set-count-maps', new_count)
-                await self.bot.db_helper.update_pug(ctx.channel.category_id, count_maps=new_count)
-
-        await ctx.send(embed=self.bot.embed_template(title=msg))
-
     @remove.error
     @empty.error
     @cap.error
@@ -724,6 +724,8 @@ class CommandsCog(commands.Cog):
     @delete.error
     @teams.error
     @captains.error
+    @mpool.error
+    @pickmaps.error
     @countmaps.error
     @end.error
     @unlink.error
@@ -731,7 +733,6 @@ class CommandsCog(commands.Cog):
     @region.error
     @ban.error
     @unban.error
-    @countmaps.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):
