@@ -329,10 +329,10 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='teams {captains|autobalance|random}',
+    @commands.command(usage='pickteams {captains|autobalance|random}',
                       brief=translate('command-teams-brief'))
     @commands.has_permissions(administrator=True)
-    async def teams(self, ctx, method=None):
+    async def pickteams(self, ctx, method=None):
         """ Set or display the method by which teams are created. """
         if not await self.bot.is_pug_channel(ctx):
             return
@@ -356,10 +356,10 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='captains {volunteer|rank|random}',
+    @commands.command(usage='pickcapt {volunteer|rank|random}',
                       brief=translate('command-captains-brief'))
     @commands.has_permissions(administrator=True)
-    async def captains(self, ctx, method=None):
+    async def pickcapt(self, ctx, method=None):
         """ Set or display the method by which captains are selected. """
         if not await self.bot.is_pug_channel(ctx):
             return
@@ -722,8 +722,8 @@ class CommandsCog(commands.Cog):
     @removespect.error
     @create.error
     @delete.error
-    @teams.error
-    @captains.error
+    @pickteams.error
+    @pickcapt.error
     @mpool.error
     @pickmaps.error
     @countmaps.error

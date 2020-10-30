@@ -134,15 +134,15 @@
 
 `q!empty` **-** Empty the queue <br>
 
-`q!cap <integer>` **-** Set the capacity of the queue to the specified value <br>
-
-`q!teams <random|autobalance|captains>` **-** Set the team creation method <br>
+`q!cap <number>` **-** Set the capacity of the queue to the specified value <br>
 
 `q!addspect` **-** Add player to the spectators <br>
 
 `q!removespect` **-** Remove player from the spectators <br>
 
-`q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
+`q!pickteams <random|autobalance|captains>` **-** Set the team creation method <br>
+
+`q!pickcapt <rank|random|volunteer>` **-** Set the captain selection method <br>
 
 `q!pickmaps <random|vote|captains>` **-** Set the map selection method <br>
 
