@@ -100,7 +100,7 @@ class MatchCog(commands.Cog):
     @staticmethod
     async def random_map(mpool):
         """"""
-        return choice(mpool)
+        return [choice(mpool)]
 
     async def track_ready(self, message, members):
         menu = menus.ReadyMenu(message, self.bot, members)
