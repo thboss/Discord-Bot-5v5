@@ -1,9 +1,36 @@
-# Forked from [csgo-league-bot](https://github.com/csgo-league/csgo-league-bot)
+# Forked from [csgo-queue-bot](https://github.com/cameronshinn/csgo-queue-bot)
+
+## Description
+- A Discord bot that allows setting up CS:GO PUGs and play with friends with easy setup matches and super smooth.
+
+
+## Features
+- Authentication player's Discord account with their Steam throght WEB API.
+- Multiple queues per guild.
+- Multiple matches at time.
+- Multiple Servers.
+- Multi-maps per match.
+- Choice gameserver region.
+- Join/Leave the queue based on lobby voice channel.
+- Queue ready up system.
+- Random/Ranked/Volunteer picking captains methods..
+- Random/teambalance/captains picking teams methods.
+- Random/Vote/Veto picking map methods.
+- Add/Remove maps pool.
+- Auto create teams channels.
+- Auto delete teams channels on match end.
+- Force end matches.
+- Rank system.
+- Ban system.
+- Translations file.
 
 ## Requirements
 1. [Web API](https://github.com/thboss/csgo-league-web)
 
-2. [Server Plugins](https://github.com/thboss/csgo-league-game)
+2. [Gameserver Plugins](https://github.com/thboss/csgo-league-game)
+
+3. Python3.6+
+
 
 ## Setup
 1. First you must have a bot instance to run this script on. Follow Discord's tutorial [here](https://discord.onl/2019/03/21/how-to-set-up-a-bot-application/) on how to set one up. Be sure to invite it to a server before launch the bot.
@@ -40,6 +67,10 @@
     ```py
     DISCORD_BOT_TOKEN= #Bot token from the Discord developer portal
     DISCORD_LEAGUE_LANGUAGE= # Bot language (key from translations.json), E.g. "en"
+    DISCORD_LEAGUE_REGIONS= # game server regions, ex. "EU,USA,ASIA"
+    DISCORD_LEAGUE_LEFT_TIME= # allowed time in minutes before ban the player for leaving them team channel (set 0 to disable ban system)
+    DISCORD_LEAGUE_COOLDOWN= # ban time on left team channels, ex. "0d 1h 0m" (days/hours/minutes)
+    DISCORD_LEAGUE_CANCEL_MATCH= # Cancel the match when players leave them team channel (empty to disable)
 
     CSGO_LEAGUE_API_KEY= # API from the CS:GO League web backend .env file
     CSGO_LEAGUE_API_URL= # URL where the web panel is hosted
@@ -89,13 +120,15 @@
 
 ### Admin commands
 
-`q!create <League name>` **-** Create new league <br>
+`q!create <name>` **-** Create a new PUG <br>
 
-`q!delete` **-** Delete the league <br>
+`q!delete` **-** Delete the PUG <br>
 
 `q!forcelink <mention> <SteamId64>` **-** Force link a player on the backend <br>
 
 `q!unlink <mention>` **-**  Unlink a player on the backend <br>
+
+`q!region <region>` **-** Set the game server region <br>
 
 `q!remove <mention>` **-** Remove the mentioned user from the queue <br>
 
@@ -111,7 +144,9 @@
 
 `q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
 
-`q!maps <random|vote|captains>` **-** Set the map selection method <br>
+`q!pickmaps <random|vote|captains>` **-** Set the map selection method <br>
+
+`q!countmaps <number>` **-** Set count maps per match <br>
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
