@@ -1,6 +1,8 @@
 # db.py
 
 
+import asyncio
+import asyncpg
 import os
 
 icons_dir = 'assets/maps/icons/'
@@ -11,9 +13,14 @@ maps = [_map for _map in os.listdir(icons_dir) if
 class DBHelper:
     """ Class to contain database query wrapper functions. """
 
-    def __init__(self, pool):
+    def __init__(self, connect_url):
         """ Set attributes. """
-        self.pool = pool
+        loop = asyncio.get_event_loop()
+        self.pool = loop.run_until_complete(asyncpg.create_pool(connect_url))
+
+    async def close(self):
+        """"""
+        await self.pool.close()
 
     @staticmethod
     def _get_record_attrs(records, key):
@@ -53,12 +60,12 @@ class DBHelper:
 
         return {col: val for rec in updated_vals for col, val in rec.items()}
 
-    async def insert_leagues(self, *league_ids):
-        """ Add a list of leagues into the leagues table and return the ones successfully added. """
-        rows = [tuple([league_id] + [None] * 9 + [None] * len(maps)) for league_id in league_ids]
+    async def insert_pugs(self, *pug_ids):
+        """ Add a list of pugs into the pugs table and return the ones successfully added. """
+        rows = [tuple([pug_id] + [None] * 10 + [None] * len(maps)) for pug_id in pug_ids]
         statement = (
-            'INSERT INTO leagues (id)\n'
-            '    (SELECT id FROM unnest($1::leagues[]))\n'
+            'INSERT INTO pugs (id)\n'
+            '    (SELECT id FROM unnest($1::pugs[]))\n'
             '    ON CONFLICT (id) DO NOTHING\n'
             '    RETURNING id;'
         )
@@ -69,41 +76,19 @@ class DBHelper:
 
         return self._get_record_attrs(inserted, 'id')
 
-    async def delete_leagues(self, *league_ids):
-        """ Remove a list of leagues from the leagues table and return the ones successfully removed. """
+    async def delete_pugs(self, *pug_ids):
+        """ Remove a list of pugs from the pugs table and return the ones successfully removed. """
         statement = (
-            'DELETE FROM leagues\n'
+            'DELETE FROM pugs\n'
             '    WHERE id::BIGINT = ANY($1::BIGINT[])\n'
             '    RETURNING id;'
         )
 
         async with self.pool.acquire() as connection:
             async with connection.transaction():
-                deleted = await connection.fetch(statement, league_ids)
+                deleted = await connection.fetch(statement, pug_ids)
 
         return self._get_record_attrs(deleted, 'id')
-
-    async def sync_guilds(self, *guild_ids):
-        """ Synchronizes the guilds table with the guilds in the bot. """
-        insert_rows = [tuple([guild_id] + [None] * 9 + [None] * len(maps)) for guild_id in guild_ids]
-        insert_statement = (
-            'INSERT INTO guilds (id)\n'
-            '    (SELECT id FROM unnest($1::guilds[]))\n'
-            '    ON CONFLICT (id) DO NOTHING\n'
-            '    RETURNING id;'
-        )
-        delete_statement = (
-            'DELETE FROM guilds\n'
-            '    WHERE id::BIGINT != ALL($1::BIGINT[])\n'
-            '    RETURNING id;'
-        )
-
-        async with self.pool.acquire() as connection:
-            async with connection.transaction():
-                inserted = await connection.fetch(insert_statement, insert_rows)
-                deleted = await connection.fetch(delete_statement, guild_ids)
-
-        return self._get_record_attrs(inserted, 'id'), self._get_record_attrs(deleted, 'id')
 
     async def insert_users(self, *user_ids):
         """ Insert multiple users into the users table. """
@@ -239,10 +224,10 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'user_id')
 
-    async def get_league(self, league_id):
-        """ Get a guild's row from the leagues table. """
-        return await self._get_row('leagues', league_id)
+    async def get_pug(self, pug_id):
+        """ Get a pug's row from the pugs table. """
+        return await self._get_row('pugs', pug_id)
 
-    async def update_league(self, league_id, **data):
-        """ Update a guild's row in the leagues table. """
-        return await self._update_row('leagues', league_id, **data)
+    async def update_pug(self, pug_id, **data):
+        """ Update a pug's row in the pugs table. """
+        return await self._update_row('pugs', pug_id, **data)

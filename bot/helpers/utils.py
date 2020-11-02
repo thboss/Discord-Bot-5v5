@@ -2,10 +2,14 @@
 
 import math
 import os
+import re
 import json
+import asyncio
 
 from dotenv import load_dotenv
 
+
+time_arg_pattern = re.compile(r'\b((?:(?P<days>[0-9]+)d)|(?:(?P<hours>[0-9]+)h)|(?:(?P<minutes>[0-9]+)m))\b')
 
 load_dotenv()
 
@@ -46,3 +50,14 @@ def align_text(text, length, align='center'):
         raise ValueError('Align argument must be "center", "left" or "right"')
 
     return ' ' * pre + text + ' ' * post
+
+
+class Map:
+    """ A group of attributes representing a map. """
+
+    def __init__(self, name, dev_name, emoji, image_url):
+        """ Set attributes. """
+        self.name = name
+        self.dev_name = dev_name
+        self.emoji = emoji
+        self.image_url = image_url

@@ -3,6 +3,7 @@
 import asyncio
 import discord
 from random import shuffle, choice
+import time
 
 from bot.helpers.utils import translate
 
@@ -48,7 +49,9 @@ class TeamDraftMenu(discord.Message):
         self.pick_emojis = dict(zip(EMOJI_NUMBERS[1:], members))
         self.pick_order = '12211221'
         self.pick_number = None
+        self.picked_player = None
         self.members_left = None
+        self.players = None
         self.teams = None
         self.future = None
 
@@ -84,11 +87,11 @@ class TeamDraftMenu(discord.Message):
 
         members_left_str = ''
 
-        for emoji, member in self.pick_emojis.items():
+        for index, (emoji, member) in enumerate(self.pick_emojis.items()):
             if not any(member in team for team in self.teams):
-                members_left_str += f'{emoji}  {member.display_name}\n'
+                members_left_str += f'{emoji}  [{member.display_name}]({self.players[index].league_profile})  |  {self.players[index].score}\n'
             else:
-                members_left_str += f':heavy_multiplication_x:  ~~{member.display_name}~~\n'
+                members_left_str += f':heavy_multiplication_x:  ~~[{member.display_name}]({self.players[index].league_profile})~~\n'
 
         embed.insert_field_at(1, name=f'__{translate("players-left")}__', value=members_left_str)
 
@@ -142,10 +145,8 @@ class TeamDraftMenu(discord.Message):
 
     async def _update_menu(self, title):
         """ Update the message to reflect the current status of the team draft. """
+        await self.clear_reaction(self.picked_player)
         await self.edit(embed=self._picker_embed(title))
-        items = self.pick_emojis.items()
-        awaitables = [self.clear_reaction(emoji) for emoji, member in items if member not in self.members_left]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
     async def _process_pick(self, reaction, member):
         """ Handler function for player pick reactions. """
@@ -167,6 +168,7 @@ class TeamDraftMenu(discord.Message):
             await self.remove_reaction(reaction, member)
             title = e.message
         else:  # Player picked 
+            self.picked_player = reaction.emoji
             title = translate('team-picked', member.display_name, pick.display_name)
 
         if len(self.members_left) == 1:
@@ -187,11 +189,12 @@ class TeamDraftMenu(discord.Message):
 
     async def draft(self):
         """ Start the team draft and return the teams after it's finished. """
-        # Initialize draft
+        # Initialize 
         self.members_left = self.members.copy()  # Copy members to edit players remaining in the player pool
+        self.players = await self.bot.api_helper.get_players([member.id for member in self.members])
         self.teams = [[], []]
         self.pick_number = 0
-        captain_method = await self.bot.get_league_data(self.channel.category, 'captain_method')
+        captain_method = await self.bot.get_pug_data(self.channel.category, 'captain_method')
 
         if captain_method == 'rank':
             players = await self.bot.api_helper.get_players([member.id for member in self.members_left])
@@ -247,6 +250,7 @@ class MapDraftMenu(discord.Message):
         # Add custom attributes 
         self.bot = bot
         self.ban_order = '12' * 20
+        self.count_maps = 1
         self.captains = None
         self.map_pool = None
         self.maps_left = None
@@ -284,12 +288,6 @@ class MapDraftMenu(discord.Message):
         embed.add_field(name=f'__{translate("info")}__', value=status_str)
         return embed
 
-    async def _update_menu(self, title):
-        """ Update the message to reflect the current status of the map draft. """
-        await self.edit(embed=self._draft_embed(title))
-        awaitables = [self.clear_reaction(m.emoji) for m in self.map_pool if m.emoji not in self.maps_left]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
-
     async def _process_ban(self, reaction, member):
         """ Handler function for map ban reactions. """
         # Check that reaction is on this message
@@ -306,11 +304,14 @@ class MapDraftMenu(discord.Message):
             return
 
         self.ban_number += 1
-
-        await self._update_menu(translate('user-banned-map', member.display_name, map_ban.name))
+        # Clear banned map reaction
+        await self.clear_reaction(map_ban.emoji)
+        # Edit message
+        embed = self._draft_embed(translate('user-banned-map', member.display_name, map_ban.name))
+        await self.edit(embed=embed)
 
         # Check if the draft is over
-        if len(self.maps_left) == 1:
+        if len(self.maps_left) == self.count_maps:
             if self.future is not None:
                 self.future.set_result(None)
 
@@ -321,6 +322,7 @@ class MapDraftMenu(discord.Message):
         self.map_pool = pool
         self.maps_left = {m.emoji: m for m in self.map_pool}
         self.ban_number = 0
+        self.count_maps = await self.bot.get_pug_data(self.channel.category, 'count_maps')
 
         if len(self.map_pool) % 2 == 0:
             self.captains.reverse()
@@ -328,8 +330,8 @@ class MapDraftMenu(discord.Message):
         # Edit input message and add emoji button reactions
         await self.edit(embed=self._draft_embed(translate('map-bans-begun')))
 
-        for m in self.map_pool:
-            await self.add_reaction(m.emoji)
+        awaitables = [self.add_reaction(m.emoji) for m in self.map_pool]
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
@@ -338,15 +340,7 @@ class MapDraftMenu(discord.Message):
         self.bot.remove_listener(self._process_ban, name='on_reaction_add')
         await self.clear_reactions()
 
-        # Return class to original state after map drafting is done
-        map_pick = list(self.maps_left.values())[0]  # Get map pick before setting self.maps_left to None
-        self.captains = None
-        self.map_pool = None
-        self.maps_left = None
-        self.ban_number = None
-        self.future = None
-
-        return map_pick
+        return list(self.maps_left.values())
 
 
 class ReadyMenu(discord.Message):
@@ -481,8 +475,8 @@ class MapVoteMenu(discord.Message):
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
         await self.edit(embed=self._vote_embed())
 
-        for map_option in self.map_pool:
-            await self.add_reaction(map_option.emoji)
+        awaitables = [self.add_reaction(m.emoji) for m in self.map_pool]
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
@@ -519,9 +513,9 @@ class MapVoteMenu(discord.Message):
         self.future = None
 
         if len(winners_emoji) == 1:
-            return self.map_pool[0]
+            return self.map_pool
         elif len(winners_emoji) == 2 and self.tie_count == 1:
-            return choice(self.map_pool)
+            return [choice(self.map_pool)]
         else:
             if len(winners_emoji) == 2:
                 self.tie_count += 1

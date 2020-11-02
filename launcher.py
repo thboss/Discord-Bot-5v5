@@ -2,6 +2,7 @@
 
 from bot.bot import LeagueBot
 
+import argparse
 import asyncio
 import asyncpg
 from dotenv import load_dotenv
@@ -12,9 +13,8 @@ load_dotenv() # Load the environment variables in the local .env file
 def run_bot():
     """ Parse the config file and run the bot. """
     # Get database object for bot
-    connect_url = 'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}'
-    loop = asyncio.get_event_loop()
-    db_pool = loop.run_until_complete(asyncpg.create_pool(connect_url.format(**os.environ)))
+    db_connect_url = 'postgresql://{POSTGRESQL_USER}:{POSTGRESQL_PASSWORD}@{POSTGRESQL_HOST}:{POSTGRESQL_PORT}/{POSTGRESQL_DB}'
+    db_connect_url = db_connect_url.format(**os.environ)
 
     # Get environment variables
     bot_token = os.environ['DISCORD_BOT_TOKEN']
@@ -24,9 +24,10 @@ def run_bot():
     if api_url.endswith('/'):
         api_url = api_url[:-1]
     # Instantiate bot and run
-    bot = LeagueBot(bot_token, api_url, api_key, db_pool)
+    bot = LeagueBot(bot_token, api_url, api_key, db_connect_url)
     bot.run()
 
 
 if __name__ == '__main__':
+    argparse.ArgumentParser(description='Run the CS:GO League bot')
     run_bot()

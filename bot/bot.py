@@ -6,6 +6,7 @@ from discord.utils import get
 
 from . import cogs
 from . import helpers
+from .helpers.utils import Map
 
 import aiohttp
 import asyncio
@@ -20,21 +21,10 @@ _CWD = os.path.dirname(os.path.abspath(__file__))
 INTENTS_JSON = os.path.join(_CWD, 'intents.json')
 
 
-class Map:
-    """ A group of attributes representing a map. """
-
-    def __init__(self, name, dev_name, emoji, image_url):
-        """ Set attributes. """
-        self.name = name
-        self.dev_name = dev_name
-        self.emoji = emoji
-        self.image_url = image_url
-
-
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
-    def __init__(self, discord_token, api_base_url, api_key, db_pool):
+    def __init__(self, discord_token, api_base_url, api_key, db_connect_url):
         """ Set attributes and configure bot. """
         # Call parent init
         with open(INTENTS_JSON) as f:
@@ -47,20 +37,18 @@ class LeagueBot(commands.AutoShardedBot):
         self.discord_token = discord_token
         self.api_base_url = api_base_url
         self.api_key = api_key
-        self.db_pool = db_pool
-        self.all_maps = []
+        self.db_connect_url = db_connect_url
+        self.all_maps = {}
 
         # Set constants
         self.color = 0x0086FF
         self.activity = discord.Activity(type=discord.ActivityType.watching, name="CS:GO League")
 
         # Create session for API
-        self.session = aiohttp.ClientSession(loop=self.loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
-                                             raise_for_status=True)
-        self.api_helper = helpers.ApiHelper(self.session, self.api_base_url, self.api_key)
+        self.api_helper = helpers.ApiHelper(self.loop, self.api_base_url, self.api_key)
 
         # Create DB helper to use connection pool
-        self.db_helper = helpers.DBHelper(self.db_pool)
+        self.db_helper = helpers.DBHelper(self.db_connect_url)
 
         # Initialize set of errors to ignore
         self.ignore_error_types = set()
@@ -87,16 +75,18 @@ class LeagueBot(commands.AutoShardedBot):
         kwargs['color'] = self.color
         return discord.Embed(**kwargs)
 
-    async def get_league_data(self, category, data):
-        guild_data = await self.db_helper.get_league(category.id)
+    async def get_pug_data(self, category, data):
+        """"""
+        guild_data = await self.db_helper.get_pug(category.id)
         try:
             return guild_data[data]
         except KeyError:
             return None
 
-    async def isValidChannel(self, ctx):
+    async def is_pug_channel(self, ctx):
+        """"""
         try:
-            channel_id = await self.get_league_data(ctx.channel.category, 'text_commands')
+            channel_id = await self.get_pug_data(ctx.channel.category, 'text_commands')
         except AttributeError:
             channel_id = None
         commands_channel = self.get_channel(channel_id)
@@ -108,7 +98,7 @@ class LeagueBot(commands.AutoShardedBot):
 
     async def create_emojis(self):
         """ Upload custom map emojis to guilds. """
-        url_path = 'https://raw.githubusercontent.com/thboss/Discord-Bot-5v5/master/assets/maps/icons/'
+        url_path = 'https://raw.githubusercontent.com/thboss/CSGO-PUGs-Bot/master/assets/maps/icons/'
         icons_dic = 'assets/maps/icons/'
         icons = os.listdir(icons_dic)
         emojis = [e.name for e in self.guilds[0].emojis]
@@ -123,16 +113,26 @@ class LeagueBot(commands.AutoShardedBot):
                 else:
                     emoji = get(self.guilds[0].emojis, name=emoji_dev)
 
-                self.all_maps.append(
-                    Map(emoji_name, emoji_dev, f'<:{emoji_dev}:{emoji.id}>', f'{url_path}{icon.replace(" ", "%20")}'))
+                    self.all_maps[emoji_dev] = Map(emoji_name,emoji_dev,
+                                                     f'<:{emoji_dev}:{emoji.id}>',
+                                                     f'{url_path}{icon.replace(" ", "%20")}')
 
     @commands.Cog.listener()
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
         print('Creating emojis...')
-        # await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
         await self.create_emojis()
         print('Bot is ready!')
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild):
+        """ Insert the newly added guild to the guilds table. """
+        await self.create_emojis()
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild):
+        """ Delete the recently removed guild from the guilds table. """
+        await self.db_helper.delete_guilds(guild.id)
 
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
@@ -148,5 +148,6 @@ class LeagueBot(commands.AutoShardedBot):
     async def close(self):
         """ Override parent close to close the API session also. """
         await super().close()
-        await self.session.close()
-        await self.db_pool.close()
+        await self.api_helper.close()
+        await self.db_helper.close()
+        self.scheduler.shutdown(wait=False)

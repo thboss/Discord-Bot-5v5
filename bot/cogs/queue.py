@@ -2,6 +2,7 @@
 
 from discord.ext import commands
 from discord.errors import NotFound, HTTPException
+from discord.utils import get
 from collections import defaultdict
 import asyncio
 
@@ -21,7 +22,7 @@ class QueueCog(commands.Cog):
     async def queue_embed(self, category, title=None):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(category.id)
-        capacity = await self.bot.get_league_data(category, 'capacity')
+        capacity = await self.bot.get_pug_data(category, 'capacity')
         
         if len(queued_ids) > 1:
             players = await self.bot.api_helper.get_players(queued_ids)
@@ -50,7 +51,7 @@ class QueueCog(commands.Cog):
             msg = None
 
         try:
-            queue_id = await self.bot.get_league_data(category, 'text_queue')
+            queue_id = await self.bot.get_pug_data(category, 'text_queue')
         except:
             queue_id = None
 
@@ -67,12 +68,12 @@ class QueueCog(commands.Cog):
             return
 
         try:
-            after_id = await self.bot.get_league_data(after.channel.category, 'voice_lobby')
+            after_id = await self.bot.get_pug_data(after.channel.category, 'voice_lobby')
         except AttributeError:
             after_id = None
 
         try:
-            before_id = await self.bot.get_league_data(before.channel.category, 'voice_lobby')
+            before_id = await self.bot.get_pug_data(before.channel.category, 'voice_lobby')
         except AttributeError:
             before_id = None
 
@@ -90,19 +91,19 @@ class QueueCog(commands.Cog):
                     self.bot.api_helper.get_player(member.id),
                     self.bot.db_helper.insert_users(member.id),
                     self.bot.db_helper.get_queued_users(after_lobby.category_id),
-                    self.bot.db_helper.get_league(after_lobby.category_id),
-                    self.bot.db_helper.get_spect_users(after_lobby.category_id),
+                    self.bot.get_pug_data(after_lobby.category, 'capacity'),
+                    self.bot.db_helper.get_spect_users(after_lobby.category_id)
                 ]
                 results = await asyncio.gather(*awaitables, loop=self.bot.loop)
                 player = results[0]
                 queue_ids = results[2]
-                capacity = results[3]['capacity']
+                capacity = results[3]
                 spect_ids = results[4]
 
                 if member.id in queue_ids:  # Author already in queue
                     title = translate('already-in-queue', member.display_name)
                 elif member.id in spect_ids:  # Player in the spectators
-                    title = f'Unable to add **{member.display_name}**: in the spectators'
+                    title = translate('in-spectators', member.display_name)
                 elif len(queue_ids) >= capacity:  # Queue full
                     title = translate('queue-is-full', member.display_name)
                 elif not player:  # ApiHelper couldn't get player
@@ -118,7 +119,7 @@ class QueueCog(commands.Cog):
                     if len(queue_ids) == capacity:
                         self.block_lobby[after_lobby.category] = True
                         match_cog = self.bot.get_cog('MatchCog')
-                        pug_role_id = await self.bot.get_league_data(after_lobby.category, 'pug_role')
+                        pug_role_id = await self.bot.get_pug_data(after_lobby.category, 'pug_role')
                         pug_role = member.guild.get_role(pug_role_id)
                         await after_lobby.set_permissions(pug_role, connect=False)
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
@@ -127,16 +128,16 @@ class QueueCog(commands.Cog):
                         if all_readied:
                             await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
 
-                        if match_cog.no_servers[after_lobby]:
+                        if match_cog.no_servers[after_lobby.category]:
                             await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
-                            prelobby_id = await self.bot.get_league_data(after_lobby.category, 'voice_prelobby')
+                            prelobby_id = await self.bot.get_pug_data(after_lobby.category, 'voice_prelobby')
                             prelobby = after_lobby.guild.get_channel(prelobby_id)
                             for member in queue_members:
                                 try:
                                     await member.move_to(prelobby)
                                 except (AttributeError, HTTPException):
                                     pass
-                            match_cog.no_servers[after_lobby] = False
+                            match_cog.no_servers[after_lobby.category] = False
 
                         self.block_lobby[after_lobby.category] = False
                         await after_lobby.set_permissions(pug_role, connect=True)

@@ -13,6 +13,7 @@ from random import shuffle, choice
 from traceback import print_exception
 from collections import defaultdict
 import sys
+import os
 
 
 class MatchCog(commands.Cog):
@@ -92,7 +93,7 @@ class MatchCog(commands.Cog):
     @staticmethod
     async def random_map(mpool):
         """"""
-        return choice(mpool)
+        return [choice(mpool)]
 
     async def track_ready(self, message, members):
         menu = menus.ReadyMenu(message, self.bot, members)
@@ -124,7 +125,7 @@ class MatchCog(commands.Cog):
                                      'members_team_one': members_team_one,
                                      'members_team_two': members_team_two}
 
-        lobby_id = await self.bot.get_league_data(league_category, 'voice_lobby')
+        lobby_id = await self.bot.get_pug_data(league_category, 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
 
         # move members into thier team channels
@@ -145,9 +146,9 @@ class MatchCog(commands.Cog):
     async def delete_match_channels(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
 
-        lobby_id = await self.bot.get_league_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
+        lobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
-        prelobby_id = await self.bot.get_league_data(self.match_dict[matchid]['league_category'], 'voice_prelobby')
+        prelobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_prelobby')
         prelobby = self.bot.get_channel(prelobby_id)
         match_players = self.match_dict[matchid]['members_team_one'] + self.match_dict[matchid]['members_team_two']
 
@@ -169,7 +170,7 @@ class MatchCog(commands.Cog):
 
         queue_cog = self.bot.get_cog('QueueCog')
         msg = queue_cog.last_queue_msgs.get(category)
-        channel_id = await self.bot.get_league_data(category, 'text_queue')
+        channel_id = await self.bot.get_pug_data(category, 'text_queue')
         text_channel = category.guild.get_channel(channel_id)
 
         if msg is not None:
@@ -178,6 +179,7 @@ class MatchCog(commands.Cog):
 
         self.ready_message[category] = await text_channel.send(''.join([member.mention for member in members]))
         ready_users = await self.track_ready(self.ready_message[category], members)
+        await asyncio.sleep(1)
         unreadied = set(members) - ready_users
 
         if unreadied:  # Not everyone readied up
@@ -188,7 +190,7 @@ class MatchCog(commands.Cog):
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
-            prelobby_id = await self.bot.get_league_data(category, 'voice_prelobby')
+            prelobby_id = await self.bot.get_pug_data(category, 'voice_prelobby')
             prelobby = category.guild.get_channel(prelobby_id)
             title = translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
@@ -206,7 +208,7 @@ class MatchCog(commands.Cog):
             # Attempt to make teams and start match
             awaitables = [
                 self.ready_message[category].clear_reactions(),
-                self.bot.db_helper.get_league(category.id)
+                self.bot.db_helper.get_pug(category.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
 
@@ -229,9 +231,10 @@ class MatchCog(commands.Cog):
             spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
-            mpool = [m for m in self.bot.all_maps if await self.bot.get_league_data(category, m.dev_name)]
+            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
+            count_maps = await self.bot.get_pug_data(category, 'count_maps')
 
-            if map_method == 'captains':
+            if map_method == 'captains' or count_maps > 1:
                 map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)
@@ -246,7 +249,7 @@ class MatchCog(commands.Cog):
 
             # Check if able to get a match server and edit message embed accordingly
             try:
-                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, map_pick.dev_name)
+                match = await self.bot.api_helper.start_match(team_one, team_two, spect_steams, [m.dev_name for m in map_pick])
             except aiohttp.ClientResponseError as e:
                 description = translate('no-servers')
                 burst_embed = self.bot.embed_template(title=translate('problem'), description=description)
@@ -267,19 +270,18 @@ class MatchCog(commands.Cog):
                 else:
                     team2_players = [await self.bot.api_helper.get_player(team_two[0].id)]
 
-                match_url = f'{self.bot.api_helper.base_url}/match/{match.id}'
                 description = translate('server-connect', match.connect_url, match.connect_command)
                 burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
-                burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match_url)
-                burst_embed.set_thumbnail(url=map_pick.image_url)
+                burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match.match_page)
+                burst_embed.set_thumbnail(url=map_pick[0].image_url)
                 
                 burst_embed.add_field(name=f'__{translate("team")} {team_one[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team1_players[num-1].league_profile})\n' for num, member in enumerate(team_one, start=1)))
                 burst_embed.add_field(name=f'__{translate("team")} {team_two[0].display_name}__',
                                       value=''.join(f'{num}. [{member.display_name}]({team2_players[num-1].league_profile})\n' for num, member in enumerate(team_two, start=1)))
-                burst_embed.add_field(name=f'__Spectators__',
-                                      value='No spectators' if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
+                burst_embed.add_field(name=f"__{translate('spectators')}__",
+                                      value=translate('no-spectators') if not spect_members else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
                 burst_embed.set_footer(text=translate('server-message-footer'))
 
             await self.ready_message[category].edit(embed=burst_embed)

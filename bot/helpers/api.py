@@ -1,5 +1,21 @@
 # api.py
 
+import aiohttp
+import asyncio
+import json
+
+
+def catch_ZeroDivisionError(func):
+    """ Decorator to catch ZeroDivisionError and return 0. """
+    def caught_func(*args, **kwargs):
+        """ Function to be returned by the decorator. """
+        try:
+            return func(*args, **kwargs)
+        except ZeroDivisionError:
+            return 0
+
+    return caught_func
+
 
 class Player:
     """ Represents a player with the contents returned by the API. """
@@ -115,53 +131,44 @@ class Player:
         return self.match_win + self.match_draw + self.match_lose
 
     @property
+    @catch_ZeroDivisionError
     def win_percent(self):
         """ Calculate and return win percentage. """
-        try:
-            return self.match_win / (self.match_win + self.match_lose)
-        except ZeroDivisionError:
-            return 0
+        return self.match_win / (self.match_win + self.match_lose)
 
     @property
+    @catch_ZeroDivisionError
     def kd_ratio(self):
         """ Calculate and return K/D ratio. """
-        try:
-            return self.kills / self.deaths
-        except ZeroDivisionError:
-            return 0
+        return self.kills / self.deaths
 
     @property
+    @catch_ZeroDivisionError
     def adr(self):
         """ Calculate and return average damage per round. """
-        try:
-            return self.damage / (self.rounds_tr + self.rounds_ct)
-        except ZeroDivisionError:
-            return 0
+        return self.damage / (self.rounds_tr + self.rounds_ct)
 
     @property
+    @catch_ZeroDivisionError
     def hs_percent(self):
         """ Calculate and return headshot kill percentage. """
-        try:
-            return float(self.headshots / self.kills)
-        except ZeroDivisionError:
-            return 0
+        return float(self.headshots / self.kills)
 
     @property
+    @catch_ZeroDivisionError
     def first_blood_rate(self):
-        try:
-            return self.first_blood / (self.rounds_tr + self.rounds_ct)
-        except ZeroDivisionError:
-            return 0
+        return self.first_blood / (self.rounds_tr + self.rounds_ct)
 
 
 class MatchServer:
     """ Represents a match server with the contents returned by the API. """
 
-    def __init__(self, json):
+    def __init__(self, json, web_url=None):
         """ Set attributes. """
         self.id = json['match_id']
         self.ip = json['ip']
         self.port = json['port']
+        self.web_url = web_url
     
     @property
     def connect_url(self):
@@ -173,15 +180,28 @@ class MatchServer:
         """ Format console command to connect to server. """
         return f'connect {self.ip}:{self.port}'
 
+    @property
+    def match_page(self):
+        """ Generate the matches CS:GO League page link. """
+        if self.web_url:
+            return f'{self.web_url}/match/{self.id}'
+
 
 class ApiHelper:
     """ Class to contain API request wrapper functions. """
 
-    def __init__(self, session, base_url, api_key):
+    def __init__(self, loop, base_url, api_key):
         """ Set attributes. """
-        self.session = session
         self.base_url = base_url
         self.api_key = api_key
+
+        # Start session
+        self.session = aiohttp.ClientSession(loop=loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
+                                             raise_for_status=True)
+
+    async def close(self):
+        """ Close the API helper's session. """
+        await self.session.close()
 
     @property
     def headers(self):
@@ -273,6 +293,14 @@ class ApiHelper:
         async with self.session.get(url=url, headers=self.headers) as resp:
             return await resp.json()
 
+    async def send_server_message(self, matchid, msg):
+        """"""
+        url = f'{self.base_url}/match/message/{matchid}'
+        data = {'message': msg}
+
+        async with self.session.post(url=url, headers=self.headers, data=data) as resp:
+            return resp.status == 200
+
     async def start_match(self, team_one, team_two, spectators=None, map_pick=None):
         """ Get a match server from the API. """
         url = f'{self.base_url}/match/start'
@@ -286,6 +314,6 @@ class ApiHelper:
 
         if map_pick:
             data['maps'] = map_pick
-            
+
         async with self.session.post(url=url, headers=self.headers, json=data) as resp:
-            return MatchServer(await resp.json())
+            return MatchServer(await resp.json(), self.base_url)

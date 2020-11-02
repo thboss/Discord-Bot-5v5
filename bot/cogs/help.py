@@ -5,7 +5,7 @@ import Levenshtein as lev
 
 from bot.helpers.utils import translate
 
-GITHUB = 'https://github.com/thboss/Discord-Bot-5v5'  # TODO: Use git API to get link to repo?
+GITHUB = 'https://github.com/thboss/CSGO-PUGs-Bot'  # TODO: Use git API to get link to repo?
 SERVER_INV = 'https://discord.gg/b5MhANU'
 
 
@@ -44,15 +44,15 @@ class HelpCog(commands.Cog):
             lev_min = min(lev_dists)
 
             # Prep help message title
-            embed_title = f'**```{ctx.message.content}```** is not valid!'
+            embed_title = translate('command-not-valid', ctx.message.content)
             prefixes = self.bot.command_prefix
             prefix = prefixes[0] if prefixes is not str else prefixes  # Prefix can be string or iterable of strings
 
             # Make suggestion if lowest Levenshtein distance is under threshold
             if lev_min <= 0.5:
-                embed_title += f' Did you mean `{prefix}{bot_cmds[lev_dists.index(lev_min)]}`?'
+                embed_title += translate('did-you-mean') + f' `{prefix}{bot_cmds[lev_dists.index(lev_min)]}`?'
             else:
-                embed_title += f' Use `{prefix}help` for a list of commands'
+                embed_title += translate('use-help', prefix)
 
             embed = self.bot.embed_template(title=embed_title)
             await ctx.send(embed=embed)
@@ -60,18 +60,12 @@ class HelpCog(commands.Cog):
     @commands.command(brief=translate('command-help-brief'))
     async def help(self, ctx):
         """ Generate and send help embed based on the bot's commands. """
-        if not await self.bot.isValidChannel(ctx):
-            return
-
-        embed = self.help_embed('__CS:GO League Bot Commands__')
+        embed = self.help_embed(translate('league-commands'))
         await ctx.send(embed=embed)
 
     @commands.command(brief=translate('command-about-brief'))
     async def about(self, ctx):
         """ Display the info embed. """
-        if not await self.bot.isValidChannel(ctx):
-            return
-
         description = (
             f'_{translate("bot-description")}_\n\n'
             f'Join the [support server]({SERVER_INV})\n'
