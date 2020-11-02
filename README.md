@@ -9,6 +9,7 @@
 - Multiple queues per guild.
 - Multiple matches at time.
 - Multiple Servers.
+- Multiple maps per match.
 - Join/Leave the queue based on lobby voice channel.
 - Queue ready up system.
 - Random/Ranked/Volunteer picking captains methods..
@@ -120,21 +121,21 @@
 
 `q!unlink <mention>` **-**  Delete the mentioned on the backend <br>
 
-`q!remove <mention>` **-** Remove the mentioned user from the queue <br>
-
-`q!empty` **-** Empty the queue <br>
-
-`q!cap <integer>` **-** Set the capacity of the queue to the specified value <br>
-
-`q!teams <random|autobalance|captains>` **-** Set the team creation method <br>
-
-`q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
-
-`q!maps <random|vote|captains>` **-** Set the map selection method <br>
-
 `q!addspect <mention>` **-** Add the mentioned user to the spectators <br>
 
 `q!removespect <mention>` **-** Remove the mentioned user from the spectators <br>
+
+`q!empty` **-** Empty the queue <br>
+
+`q!cap <number>` **-** Set the capacity of the queue to the specified value <br>
+
+`q!pickteams <random|autobalance|captains>` **-** Set the team creation method <br>
+
+`q!pickcapts <rank|random|volunteer>` **-** Set the captain selection method <br>
+
+`q!pickmaps <random|vote|captains>` **-** Set the map selection method <br>
+
+`q!countmaps <number>` **-** Set count maps for matches <br>
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
