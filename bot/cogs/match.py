@@ -270,7 +270,8 @@ class MatchCog(commands.Cog):
                 else:
                     team2_players = [await self.bot.api_helper.get_player(team_two[0].id)]
 
-                description = translate('server-connect', match.connect_url, match.connect_command)
+                description = f'{translate("server-connect", match.connect_url, match.connect_command)}\n' \
+                              f'**{translate("maps")}:** {" ".join(m.emoji for m in map_pick)}'
                 burst_embed = self.bot.embed_template(title=translate('server-ready'), description=description)
 
                 burst_embed.set_author(name=f'{translate("match")}{match.id}', url=match.match_page)
