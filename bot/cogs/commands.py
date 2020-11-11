@@ -441,17 +441,17 @@ class CommandsCog(commands.Cog):
         current = await self.bot.get_pug_data(ctx.channel.category, 'num_maps')
 
         try:
-            new_count = int(args[0])
+            new_num = int(args[0])
         except (IndexError, ValueError):
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}nummaps <number>`'
         else:
-            if new_count == current:
-                msg = translate('count-maps-already', current)
-            elif new_count < 1 or new_count > 5:
-                msg = translate('count-maps-out-range')
+            if new_num == current:
+                msg = translate('num-maps-already', current)
+            elif new_num < 1 or new_num > 5:
+                msg = translate('num-maps-out-range')
             else:
-                msg = translate('set-count-maps', new_count)
-                await self.bot.db_helper.update_pug(ctx.channel.category_id, num_maps=new_count)
+                msg = translate('set-num-maps', new_num)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, num_maps=new_num)
 
         await ctx.send(embed=self.bot.embed_template(title=msg))
 

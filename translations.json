@@ -139,10 +139,10 @@
         "did-you-mean":         "Did you mean",
         "use-help":             "Use `{}help` for a list of commands",
         "league-commands":      "__CS:GO League Bot Commands__",
-        "current-count-maps":   "Current matches' count maps is {}",
-        "count-maps-already":   "Matches' count maps already set to {}",
-        "set-count-maps":       "Matches' count maps successfully set to {}",
-        "count-maps-out-range": "Matches' count maps is outside of valid range (1-5)"
+        "current-num-maps":   "Current number of maps is {}",
+        "num-maps-already":   "Number of maps already set to {}",
+        "set-num-maps":       "Number of  maps has successfully set to {}",
+        "num-maps-out-range": "Number of  maps is outside of valid range (1-5)"
     },
     "ru": {
         "create-league":        "Лига **{}** успешно создана",
