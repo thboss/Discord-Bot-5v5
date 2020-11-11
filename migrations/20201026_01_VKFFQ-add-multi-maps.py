@@ -9,11 +9,11 @@ steps = [
     step(
         (
             'ALTER TABLE pugs\n'
-            'ADD COLUMN count_maps SMALLINT DEFAULT 1;'
+            'ADD COLUMN num_maps SMALLINT DEFAULT 1;'
         ),
         (
             'ALTER TABLE pugs\n'
-            'DROP COLUMN count_maps;'
+            'DROP COLUMN num_maps;'
         )
     )
 ]

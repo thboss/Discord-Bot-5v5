@@ -232,9 +232,9 @@ class MatchCog(commands.Cog):
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
             mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
-            count_maps = await self.bot.get_pug_data(category, 'count_maps')
+            num_maps = await self.bot.get_pug_data(category, 'num_maps')
 
-            if map_method == 'captains' or count_maps > 1:
+            if map_method == 'captains' or num_maps > 1:
                 map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)

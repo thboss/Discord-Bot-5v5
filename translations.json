@@ -133,7 +133,7 @@
         "command-help-brief":   "Display the help menu",
         "command-about-brief":  "Display basic info about this bot",
         "command-forcelink-brief": "Force link a player with a steam id (must have admin perms)",
-        "command-countmaps-brief":"Set count maps for matches",
+        "command-nummaps-brief":"Set number maps of matches",
         "bot-description":      "An easy to use, fully automated system to set up and play CS:GO pickup games",
         "command-not-valid":    "command **```{}```** is not valid!",
         "did-you-mean":         "Did you mean",

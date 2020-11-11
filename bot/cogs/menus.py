@@ -250,7 +250,7 @@ class MapDraftMenu(discord.Message):
         # Add custom attributes 
         self.bot = bot
         self.ban_order = '12' * 20
-        self.count_maps = 1
+        self.num_maps = 1
         self.captains = None
         self.map_pool = None
         self.maps_left = None
@@ -311,7 +311,7 @@ class MapDraftMenu(discord.Message):
         await self.edit(embed=embed)
 
         # Check if the draft is over
-        if len(self.maps_left) == self.count_maps:
+        if len(self.maps_left) == self.num_maps:
             if self.future is not None:
                 self.future.set_result(None)
 
@@ -322,7 +322,7 @@ class MapDraftMenu(discord.Message):
         self.map_pool = pool
         self.maps_left = {m.emoji: m for m in self.map_pool}
         self.ban_number = 0
-        self.count_maps = await self.bot.get_pug_data(self.channel.category, 'count_maps')
+        self.num_maps = await self.bot.get_pug_data(self.channel.category, 'num_maps')
 
         if len(self.map_pool) % 2 == 0:
             self.captains.reverse()

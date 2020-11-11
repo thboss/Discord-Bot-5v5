@@ -430,20 +430,20 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='countmaps <number>',
-                      brief=translate('command-countmaps-brief'))
+    @commands.command(usage='nummaps <number>',
+                      brief=translate('command-nummaps-brief'))
     @commands.has_permissions(administrator=True)
-    async def countmaps(self, ctx, *args):
+    async def nummaps(self, ctx, *args):
         """"""
         if not await self.bot.is_pug_channel(ctx):
             return
 
-        current = await self.bot.get_pug_data(ctx.channel.category, 'count_maps')
+        current = await self.bot.get_pug_data(ctx.channel.category, 'num_maps')
 
         try:
             new_count = int(args[0])
         except (IndexError, ValueError):
-            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}countmaps <number>`'
+            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}nummaps <number>`'
         else:
             if new_count == current:
                 msg = translate('count-maps-already', current)
@@ -451,7 +451,7 @@ class CommandsCog(commands.Cog):
                 msg = translate('count-maps-out-range')
             else:
                 msg = translate('set-count-maps', new_count)
-                await self.bot.db_helper.update_pug(ctx.channel.category_id, count_maps=new_count)
+                await self.bot.db_helper.update_pug(ctx.channel.category_id, num_maps=new_count)
 
         await ctx.send(embed=self.bot.embed_template(title=msg))
 
@@ -563,7 +563,7 @@ class CommandsCog(commands.Cog):
     @pickteams.error
     @pickcapts.error
     @pickmaps.error
-    @countmaps.error
+    @nummaps.error
     @mpool.error
     @end.error
     @unlink.error
