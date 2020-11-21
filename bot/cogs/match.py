@@ -78,10 +78,10 @@ class MatchCog(commands.Cog):
         team_size = len(temp_members) // 2
         return temp_members[:team_size], temp_members[team_size:]
 
-    async def draft_maps(self, message, mpool, captain_1, captain_2):
+    async def draft_maps(self, message, mpool, captain_1, captain_2, num_maps):
         """"""
         menu = menus.MapDraftMenu(message, self.bot)
-        map_pick = await menu.draft(mpool, captain_1, captain_2)
+        map_pick = await menu.draft(mpool, captain_1, captain_2, num_maps)
         return map_pick
 
     async def vote_maps(self, message, mpool, members):
@@ -99,6 +99,11 @@ class MatchCog(commands.Cog):
         menu = menus.ReadyMenu(message, self.bot, members)
         ready_users = await menu.ready_up()
         return ready_users
+
+    async def vote_bo(self, message, captains):
+        menu = menus.BOVoteMenu(message, self.bot, captains)
+        voted_bo = await menu.vote()
+        return voted_bo
 
     async def create_match_channels(self, league_category, match_id, members_team_one, members_team_two):
         """ Create teams voice channels and move players into. """
@@ -232,10 +237,11 @@ class MatchCog(commands.Cog):
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
             mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
-            num_maps = await self.bot.get_pug_data(category, 'num_maps')
+
+            num_maps = await self.vote_bo(self.ready_message[category], [team_one[0], team_two[0]])
 
             if map_method == 'captains' or num_maps > 1:
-                map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0])
+                map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0], num_maps)
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)
             elif map_method == 'random':

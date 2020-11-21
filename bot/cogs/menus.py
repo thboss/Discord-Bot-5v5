@@ -315,14 +315,14 @@ class MapDraftMenu(discord.Message):
             if self.future is not None:
                 self.future.set_result(None)
 
-    async def draft(self, pool, captain_1, captain_2):
+    async def draft(self, pool, captain_1, captain_2, num_maps):
         """ Start the team draft and return the teams after it's finished. """
         # Initialize draft
         self.captains = [captain_1, captain_2]
         self.map_pool = pool
         self.maps_left = {m.emoji: m for m in self.map_pool}
         self.ban_number = 0
-        self.num_maps = await self.bot.get_pug_data(self.channel.category, 'num_maps')
+        self.num_maps = num_maps
 
         if len(self.map_pool) % 2 == 0:
             self.captains.reverse()
@@ -520,3 +520,94 @@ class MapVoteMenu(discord.Message):
             if len(winners_emoji) == 2:
                 self.tie_count += 1
             return await self.vote(self.map_pool)
+
+
+class BOVoteMenu(discord.Message):
+    """"""
+
+    def __init__(self, message, bot, captains):
+        """ Copy constructor from a message and specific team draft args. """
+        # Copy all attributes from message object
+        for attr_name in message.__slots__:
+            try:
+                attr_val = getattr(message, attr_name)
+            except AttributeError:
+                continue
+
+            setattr(self, attr_name, attr_val)
+
+        # Add custom attributes
+        self.bot = bot
+        self.numbers = EMOJI_NUMBERS[1:6]
+        self.captains = captains
+        self.voted_captains = {}
+        self.future = None
+
+    def _vote_embed(self):
+        embed = self.bot.embed_template(title='Captains vote for number of maps')
+        str_value = '------------\n'
+        str_value += '\n'.join(
+            f'{num}  Bo{self.numbers.index(num) + 1}'
+            f'{":small_orange_diamond:" if self.num_votes[num] == max(self.num_votes.values()) and self.num_votes[num] != 0 else ""} '
+            for num in self.numbers)
+        embed.add_field(name=f':repeat_one:  __' + translate("series-type") + '__', value=str_value)
+        embed.set_footer(text=translate('vote-num-maps-footer'))
+        return embed
+
+    async def _process_vote(self, reaction, member):
+        """"""
+        # Check that reaction is on this message and user is not the bot
+        if reaction.message.id != self.id or member == self.author:
+            return
+
+        if member not in self.captains or member in self.voted_captains or str(reaction) not in self.numbers:
+            await self.remove_reaction(reaction, member)
+            return
+
+        self.num_votes[str(reaction)] += 1
+
+        self.voted_captains[member] = str(reaction)
+        await self.edit(embed=self._vote_embed())
+        # Check if the voting is over
+        if len(self.voted_captains) == len(self.captains):
+            if self.future is not None:
+                self.future.set_result(None)
+
+    async def vote(self):
+        """"""
+        self.num_votes = {num: 0 for num in self.numbers}
+        await self.edit(embed=self._vote_embed())
+
+        awaitables = [self.add_reaction(num) for num in self.numbers]
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
+
+        self.future = self.bot.loop.create_future()
+        self.bot.add_listener(self._process_vote, name='on_reaction_add')
+
+        try:
+            await asyncio.wait_for(self.future, 60)
+        except asyncio.TimeoutError:
+            pass
+
+        self.bot.remove_listener(self._process_vote, name='on_reaction_add')
+        try:
+            await self.clear_reactions()
+        except discord.errors.NotFound:
+            pass
+
+        # Gather results
+        winners_emoji = []
+        winners_votes = 0
+
+        for emoji, votes in self.num_votes.items():
+            if votes > winners_votes:
+                winners_emoji.clear()
+                winners_emoji.append(emoji)
+                winners_votes = votes
+            elif votes == winners_votes:
+                winners_emoji.append(emoji)
+
+        if len(winners_emoji) <= 2:
+            return self.numbers.index(winners_emoji[0]) + 1
+        else:  # Force set Bo1 if no captains voted
+            return 1

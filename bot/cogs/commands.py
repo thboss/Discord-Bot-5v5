@@ -430,31 +430,6 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='nummaps <number>',
-                      brief=translate('command-nummaps-brief'))
-    @commands.has_permissions(administrator=True)
-    async def nummaps(self, ctx, *args):
-        """"""
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        current = await self.bot.get_pug_data(ctx.channel.category, 'num_maps')
-
-        try:
-            new_num = int(args[0])
-        except (IndexError, ValueError):
-            msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}nummaps <number>`'
-        else:
-            if new_num == current:
-                msg = translate('num-maps-already', current)
-            elif new_num < 1 or new_num > 5:
-                msg = translate('num-maps-out-range')
-            else:
-                msg = translate('set-num-maps', new_num)
-                await self.bot.db_helper.update_pug(ctx.channel.category_id, num_maps=new_num)
-
-        await ctx.send(embed=self.bot.embed_template(title=msg))
-
     @commands.command(usage='end [match id]',
                       brief=translate('command-end-brief'))
     @commands.has_permissions(administrator=True)
@@ -563,7 +538,6 @@ class CommandsCog(commands.Cog):
     @pickteams.error
     @pickcapts.error
     @pickmaps.error
-    @nummaps.error
     @mpool.error
     @end.error
     @unlink.error

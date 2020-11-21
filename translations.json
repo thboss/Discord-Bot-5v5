@@ -139,10 +139,8 @@
         "did-you-mean":         "Did you mean",
         "use-help":             "Use `{}help` for a list of commands",
         "league-commands":      "__CS:GO League Bot Commands__",
-        "current-num-maps":   "Current number of maps is {}",
-        "num-maps-already":   "Number of maps already set to {}",
-        "set-num-maps":       "Number of  maps has successfully set to {}",
-        "num-maps-out-range": "Number of  maps is outside of valid range (1-5)"
+        "vote-num-maps-footer": "React to either of the number icons below to vote for the number of match's maps",
+        "series-type":          "Series type"
     },
     "ru": {
         "create-league":        "Лига **{}** успешно создана",
