@@ -228,74 +228,53 @@ class CommandsCog(commands.Cog):
 
         await ctx.send(embed=self.bot.embed_template(title=msg))
 
-    @commands.command(usage='spectators', brief=translate('command-spectators-brief'))
-    async def spectators(self, ctx):
-        """ View the spectators. """
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        spect_ids = await self.bot.db_helper.get_spect_users(ctx.channel.category_id)
-
-        spect_members = [ctx.guild.get_member(spect_id) for spect_id in spect_ids]
-
-        embed = self.bot.embed_template()
-        embed.add_field(name=f'__Spectators__',
-                        value='No spectators' if not spect_members else ''.join(
-                            f'{num}. {member.mention}\n' for num, member in enumerate(spect_members, start=1)))
-        await ctx.send(embed=embed)
-
-    @commands.command(usage='addspect <mention>',
-                      brief=translate('command-addspect-brief'))
+    @commands.command(usage='spectators {+|-} <mention> <mention> ...',
+                      brief=translate('command-spectators-brief'))
     @commands.has_permissions(administrator=True)
-    async def addspect(self, ctx):
-        """ Add the specified member to the spectators. """
+    async def spectators(self, ctx, *args):
+        """"""
         if not await self.bot.is_pug_channel(ctx):
             return
 
-        try:
-            spectator = ctx.message.mentions[0]
-        except IndexError:
-            title = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}addspect <mention>`'
-        else:
-            await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, spectator.id)
+        curr_spectator_ids = await self.bot.db_helper.get_spect_users(ctx.channel.category_id)
+        curr_spectators = [ctx.guild.get_member(spectator_id) for spectator_id in curr_spectator_ids]
+        spectators = ctx.message.mentions
 
-            if spectator.id not in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
-                await self.bot.db_helper.insert_spect_users(ctx.channel.category_id, spectator.id)
-                title = f'{translate("added-spect", spectator.display_name)}'
-            else:
-                title = f'{translate("already-spect", spectator.display_name)}'
+        if not spectators:
+            embed = self.bot.embed_template()
+            embed.add_field(name=f'__Spectators__',
+                            value='No spectators' if not curr_spectators else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(curr_spectators, start=1)))
+            await ctx.send(embed=embed)
+            return
+
+        prefix = args[0]
+        title = ''
+
+        if prefix not in ['+', '-']:
+            title = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}spectators [+|-] <mention>`'
+        else:
+            await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, [spectator.id for spectator in spectators])
+            for spectator in spectators:
+                if args[0] == '+':
+                    if spectator.id not in curr_spectator_ids:
+                        await self.bot.db_helper.insert_spect_users(ctx.channel.category_id, spectator.id)
+                        title += f'{translate("added-spect", spectator.display_name)}\n'
+                    else:
+                        title = f'{translate("already-spect", spectator.display_name)}\n'
+                elif args[0] == '-':
+                    if spectator.id in curr_spectator_ids:
+                        await self.bot.db_helper.delete_spect_users(ctx.channel.category_id, spectator.id)
+                        title += f'{translate("removed-spect", spectator.display_name)}\n'
+                    else:
+                        title = f'{translate("already-spect", spectator.display_name)}\n'
 
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='removespect <mention>',
-                      brief=translate('command-removespect-brief'))
-    @commands.has_permissions(administrator=True)
-    async def removespect(self, ctx):
-        """ Remove the specified member from the spectators. """
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        try:
-            spectator = ctx.message.mentions[0]
-        except IndexError:
-            title = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}removespect <mention>`'
-        else:
-            await self.bot.db_helper.delete_queued_users(ctx.channel.category_id, spectator.id)
-
-            if spectator.id in await self.bot.db_helper.get_spect_users(ctx.channel.category_id):
-                await self.bot.db_helper.delete_spect_users(ctx.channel.category_id, spectator.id)
-                title = f'{translate("removed-spect", spectator.display_name)}'
-            else:
-                title = f'{translate("not-in-spect", spectator.display_name)}'
-
-        embed = self.bot.embed_template(title=title)
-        await ctx.send(embed=embed)
-
-    @commands.command(usage='pickteams {captains|autobalance|random}',
+    @commands.command(usage='teams {captains|autobalance|random}',
                       brief=translate('command-teams-brief'))
     @commands.has_permissions(administrator=True)
-    async def pickteams(self, ctx, method=None):
+    async def teams(self, ctx, method=None):
         """ Set or display the method by which teams are created. """
         if not await self.bot.is_pug_channel(ctx):
             return
@@ -319,10 +298,10 @@ class CommandsCog(commands.Cog):
         embed = self.bot.embed_template(title=title)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='pickcapts {volunteer|rank|random}',
+    @commands.command(usage='captains {volunteer|rank|random}',
                       brief=translate('command-captains-brief'))
     @commands.has_permissions(administrator=True)
-    async def pickcapts(self, ctx, method=None):
+    async def captains(self, ctx, method=None):
         """ Set or display the method by which captains are selected. """
         if not await self.bot.is_pug_channel(ctx):
             return
@@ -403,10 +382,10 @@ class CommandsCog(commands.Cog):
         embed.add_field(name=f'__{translate("inactive-maps")}__', value=inactive_maps)
         await ctx.send(embed=embed)
 
-    @commands.command(usage='pickmaps [{captains|vote|random}]',
+    @commands.command(usage='maps [{captains|vote|random}]',
                       brief=translate('command-maps-brief'))
     @commands.has_permissions(administrator=True)
-    async def pickmaps(self, ctx, method=None):
+    async def maps(self, ctx, method=None):
         """ Set or display the method by which the teams are created. """
         if not await self.bot.is_pug_channel(ctx):
             return
@@ -533,11 +512,10 @@ class CommandsCog(commands.Cog):
     @delete.error
     @empty.error
     @cap.error
-    @addspect.error
-    @removespect.error
-    @pickteams.error
-    @pickcapts.error
-    @pickmaps.error
+    @spectators.error
+    @teams.error
+    @captains.error
+    @maps.error
     @mpool.error
     @end.error
     @unlink.error
