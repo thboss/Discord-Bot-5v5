@@ -232,11 +232,11 @@ class TeamDraftMenu(discord.Message):
         return self.teams
 
 
-class MapDraftMenu(discord.Message):
-    """ Message containing the components for a map draft. """
+class MapVetoMenu(discord.Message):
+    """ Message containing the components for a map veto. """
 
     def __init__(self, message, bot):
-        """ Copy constructor from a message and specific team draft args. """
+        """"""
         # Copy all attributes from message object
         for attr_name in message.__slots__:
             try:
@@ -265,10 +265,10 @@ class MapDraftMenu(discord.Message):
         picking_player_number = int(self.ban_order[self.ban_number])
         return self.captains[picking_player_number - 1]  # Subtract 1 to get picker's index
 
-    def _draft_embed(self, title):
-        """ Generate the menu embed based on the current status of the map draft. """
+    def _veto_embed(self, title):
+        """ Generate the menu embed based on the current status of the map bans. """
         embed = self.bot.embed_template(title=title)
-        embed.set_footer(text=translate('map-draft-footer'))
+        embed.set_footer(text=translate('map-veto-footer'))
         maps_str = ''
 
         if self.map_pool is not None and self.maps_left is not None:
@@ -306,17 +306,17 @@ class MapDraftMenu(discord.Message):
         # Clear banned map reaction
         await self.clear_reaction(map_ban.emoji)
         # Edit message
-        embed = self._draft_embed(translate('user-banned-map', member.display_name, map_ban.name))
+        embed = self._veto_embed(translate('user-banned-map', member.display_name, map_ban.name))
         await self.edit(embed=embed)
 
-        # Check if the draft is over
+        # Check if the veto is over
         if len(self.maps_left) == self.num_maps:
             if self.future is not None:
                 self.future.set_result(None)
 
-    async def draft(self, pool, captain_1, captain_2, num_maps):
-        """ Start the team draft and return the teams after it's finished. """
-        # Initialize draft
+    async def veto(self, pool, captain_1, captain_2, num_maps):
+        """"""
+        # Initialize veto
         self.captains = [captain_1, captain_2]
         self.map_pool = pool
         self.maps_left = {m.emoji: m for m in self.map_pool}
@@ -327,7 +327,7 @@ class MapDraftMenu(discord.Message):
             self.captains.reverse()
 
         # Edit input message and add emoji button reactions
-        await self.edit(embed=self._draft_embed(translate('map-bans-begun')))
+        await self.edit(embed=self._veto_embed(translate('map-bans-begun')))
 
         awaitables = [self.add_reaction(m.emoji) for m in self.map_pool]
         await asyncio.gather(*awaitables, loop=self.bot.loop)
@@ -339,12 +339,15 @@ class MapDraftMenu(discord.Message):
         self.bot.remove_listener(self._process_ban, name='on_reaction_add')
         await self.clear_reactions()
 
-        return list(self.maps_left.values())
+        picked_maps = list(self.maps_left.values())
+        shuffle(picked_maps)
+
+        return picked_maps
 
 
 class ReadyMenu(discord.Message):
     def __init__(self, message, bot, members):
-        """ Copy constructor from a message and specific team draft args. """
+        """"""
         # Copy all attributes from message object
         for attr_name in message.__slots__:
             try:
@@ -414,10 +417,10 @@ class ReadyMenu(discord.Message):
 
 
 class MapVoteMenu(discord.Message):
-    """ Message containing the components for a map draft. """
+    """"""
 
     def __init__(self, message, bot, members):
-        """ Copy constructor from a message and specific team draft args. """
+        """"""
         # Copy all attributes from message object
         for attr_name in message.__slots__:
             try:
@@ -506,7 +509,7 @@ class MapVoteMenu(discord.Message):
 
         self.map_pool = [m for m in mpool if m.emoji in winners_emoji]
 
-        # Return class to original state after map drafting is done
+        # Return class to original state after map veto is done
         self.voted_members = None
         self.map_votes = None
         self.future = None
@@ -525,7 +528,7 @@ class BOVoteMenu(discord.Message):
     """"""
 
     def __init__(self, message, bot, captains):
-        """ Copy constructor from a message and specific team draft args. """
+        """"""
         # Copy all attributes from message object
         for attr_name in message.__slots__:
             try:

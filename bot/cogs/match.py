@@ -78,10 +78,10 @@ class MatchCog(commands.Cog):
         team_size = len(temp_members) // 2
         return temp_members[:team_size], temp_members[team_size:]
 
-    async def draft_maps(self, message, mpool, captain_1, captain_2, num_maps):
+    async def veto_maps(self, message, mpool, captain_1, captain_2, num_maps):
         """"""
-        menu = menus.MapDraftMenu(message, self.bot)
-        map_pick = await menu.draft(mpool, captain_1, captain_2, num_maps)
+        menu = menus.MapVetoMenu(message, self.bot)
+        map_pick = await menu.veto(mpool, captain_1, captain_2, num_maps)
         return map_pick
 
     async def vote_maps(self, message, mpool, members):
@@ -241,7 +241,7 @@ class MatchCog(commands.Cog):
             num_maps = await self.vote_bo(self.ready_message[category], [team_one[0], team_two[0]])
 
             if map_method == 'captains' or num_maps > 1:
-                map_pick = await self.draft_maps(self.ready_message[category], mpool, team_one[0], team_two[0], num_maps)
+                map_pick = await self.veto_maps(self.ready_message[category], mpool, team_one[0], team_two[0], num_maps)
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)
             elif map_method == 'random':
