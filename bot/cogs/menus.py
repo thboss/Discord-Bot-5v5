@@ -3,7 +3,6 @@
 import asyncio
 import discord
 from random import shuffle, choice
-import time
 
 from bot.helpers.utils import translate
 
