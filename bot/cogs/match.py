@@ -242,6 +242,8 @@ class MatchCog(commands.Cog):
 
             num_maps = await self.vote_match_type(self.ready_message[category], [team_one[0], team_two[0]])
 
+            await asyncio.sleep(1)
+
             if map_method == 'captains' or num_maps > 1:
                 map_pick = await self.veto_maps(self.ready_message[category], mpool, team_one[0], team_two[0], num_maps)
             elif map_method == 'vote':

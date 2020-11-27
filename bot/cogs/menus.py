@@ -46,7 +46,7 @@ class TeamDraftMenu(discord.Message):
         self.bot = bot
         self.members = members
         self.pick_emojis = dict(zip(EMOJI_NUMBERS[1:], members))
-        self.pick_order = '12211221'
+        self.pick_order = '1' + '2211'*20
         self.pick_number = None
         self.picked_player = None
         self.members_left = None
