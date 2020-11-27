@@ -130,11 +130,6 @@ class LeagueBot(commands.AutoShardedBot):
         await self.create_emojis()
 
     @commands.Cog.listener()
-    async def on_guild_remove(self, guild):
-        """ Delete the recently removed guild from the guilds table. """
-        await self.db_helper.delete_guilds(guild.id)
-
-    @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """ Send help message when a mis-entered command is received. """
         if type(error) not in self.ignore_error_types:
