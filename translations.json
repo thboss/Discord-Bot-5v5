@@ -137,7 +137,7 @@
         "did-you-mean":         "Did you mean",
         "use-help":             "Use `{}help` for a list of commands",
         "league-commands":      "__CS:GO League Bot Commands__",
-        "vote-num-maps-footer": "React to either of the number icons below to vote for the number of match's maps",
-        "series-type":          "Series type"
+        "vote-match-type-footer":"React to either of the number icons below to vote for the match type",
+        "match-type":          "Match type"
     }
 }

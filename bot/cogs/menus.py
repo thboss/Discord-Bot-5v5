@@ -524,7 +524,7 @@ class MapVoteMenu(discord.Message):
             return await self.vote(self.map_pool)
 
 
-class BOVoteMenu(discord.Message):
+class MatchTypeVoteMenu(discord.Message):
     """"""
 
     def __init__(self, message, bot, captains):
@@ -552,8 +552,8 @@ class BOVoteMenu(discord.Message):
             f'{num}  Bo{self.numbers.index(num) + 1}'
             f'{":small_orange_diamond:" if self.num_votes[num] == max(self.num_votes.values()) and self.num_votes[num] != 0 else ""} '
             for num in self.numbers)
-        embed.add_field(name=f':repeat_one:  __' + translate("series-type") + '__', value=str_value)
-        embed.set_footer(text=translate('vote-num-maps-footer'))
+        embed.add_field(name=f':repeat_one:  __' + translate("match-type") + '__', value=str_value)
+        embed.set_footer(text=translate('vote-match-type-footer'))
         return embed
 
     async def _process_vote(self, reaction, member):
