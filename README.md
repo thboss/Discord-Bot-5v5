@@ -9,7 +9,7 @@
 - Multiple queues per guild.
 - Multiple matches at time.
 - Multiple Servers.
-- Multiple maps per match.
+- Multiple maps (Bo1, Bo2, Bo3...).
 - Join/Leave the queue based on lobby voice channel.
 - Queue ready up system.
 - Random/Ranked/Volunteer picking captains methods..
@@ -107,7 +107,7 @@
       * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
       * Apply the new database migrations by running `python3 migrate.py up`.
 
-2. You can rename roles and channels that bot create it.
+2. You can rename roles and channels that bot has created it.
 
 ## Commands
 
@@ -121,7 +121,7 @@
 
 `q!unlink <mention>` **-**  Delete the mentioned on the backend <br>
 
-`q!addspect <mention>` **-** Add the mentioned user to the spectators <br>
+`q!spectators {+|-} <mention> <mention> ...` **-** View/Add/Remove matches spectators  <br>
 
 `q!removespect <mention>` **-** Remove the mentioned user from the spectators <br>
 
@@ -129,13 +129,11 @@
 
 `q!cap <number>` **-** Set the capacity of the queue to the specified value <br>
 
-`q!pickteams <random|autobalance|captains>` **-** Set the team creation method <br>
+`q!teams <random|autobalance|captains>` **-** Set the team creation method <br>
 
-`q!pickcapts <rank|random|volunteer>` **-** Set the captain selection method <br>
+`q!captains <rank|random|volunteer>` **-** Set the captain selection method <br>
 
-`q!pickmaps <random|vote|captains>` **-** Set the map selection method <br>
-
-`q!countmaps <number>` **-** Set count maps for matches <br>
+`q!maps <random|vote|captains>` **-** Set the map selection method <br>
 
 `q!mpool {+|-}<map name>` **-** Add/Remove maps to default map pool <br>
 
@@ -146,10 +144,8 @@
 
 `q!link` **-**  Link a player on the backend <br>
 
-`q!check` **-** Check if the player has been linked his account and grant him role to access join the lobby voice channel if so <br>
+`q!check` **-** Check if the player has been linked his account and grant him role to access join the lobby voice channel <br>
 
 `q!stats` **-** View your stats <br>
 
 `q!leaders` **-** View the top players in the server <br>
-
-`q!spectators` **-** View the spectators <br>
