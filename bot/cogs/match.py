@@ -230,7 +230,8 @@ class MatchCog(commands.Cog):
                 team_one, team_two = await self.draft_teams(self.ready_message[category], members)
             else:
                 raise ValueError(translate('team-method-not-valid', team_method))
-
+            
+            await self.ready_message[category].clear_reactions()
             await asyncio.sleep(1)
 
             spect_ids = await self.bot.db_helper.get_spect_users(category.id)
@@ -242,6 +243,7 @@ class MatchCog(commands.Cog):
 
             num_maps = await self.vote_match_type(self.ready_message[category], [team_one[0], team_two[0]])
 
+            await self.ready_message[category].clear_reactions()
             await asyncio.sleep(1)
 
             if map_method == 'captains' or num_maps > 1:
@@ -252,7 +254,8 @@ class MatchCog(commands.Cog):
                 map_pick = await self.random_map(mpool)
             else:
                 raise ValueError(translate('map-method-not-valid', map_method))
-
+            
+            await self.ready_message[category].clear_reactions()
             await asyncio.sleep(1)
             burst_embed = self.bot.embed_template(description=translate('fetching-server'))
             await self.ready_message[category].edit(content='', embed=burst_embed)
