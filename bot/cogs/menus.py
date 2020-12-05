@@ -48,7 +48,6 @@ class TeamDraftMenu(discord.Message):
         self.pick_emojis = dict(zip(EMOJI_NUMBERS[1:], members))
         self.pick_order = '1' + '2211'*20
         self.pick_number = None
-        self.picked_player = None
         self.members_left = None
         self.players = None
         self.teams = None
@@ -144,7 +143,6 @@ class TeamDraftMenu(discord.Message):
 
     async def _update_menu(self, title):
         """ Update the message to reflect the current status of the team draft. """
-        await self.clear_reaction(self.picked_player)
         await self.edit(embed=self._picker_embed(title))
 
     async def _process_pick(self, reaction, member):
@@ -167,7 +165,7 @@ class TeamDraftMenu(discord.Message):
             await self.remove_reaction(reaction, member)
             title = e.message
         else:  # Player picked 
-            self.picked_player = reaction.emoji
+            await self.clear_reaction(reaction.emoji)
             title = translate('team-picked', member.display_name, pick.display_name)
 
         if len(self.members_left) == 1:
