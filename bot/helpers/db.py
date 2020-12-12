@@ -4,6 +4,7 @@
 import asyncio
 import asyncpg
 import os
+import logging
 
 icons_dir = 'assets/maps/icons/'
 maps = [_map for _map in os.listdir(icons_dir) if
@@ -16,10 +17,13 @@ class DBHelper:
     def __init__(self, connect_url):
         """ Set attributes. """
         loop = asyncio.get_event_loop()
+        self.logger = logging.getLogger('csgoleague.db')
+        self.logger.info('Creating database connection pool')
         self.pool = loop.run_until_complete(asyncpg.create_pool(connect_url))
 
     async def close(self):
         """"""
+        self.logger.info('Closing database connection pool')
         await self.pool.close()
 
     @staticmethod

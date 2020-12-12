@@ -3,6 +3,7 @@
 import aiohttp
 import asyncio
 import json
+import logging
 
 
 def catch_ZeroDivisionError(func):
@@ -186,6 +187,23 @@ class MatchServer:
         if self.web_url:
             return f'{self.web_url}/match/{self.id}'
 
+async def start_request_log(session, ctx, params):
+    """"""
+    ctx.start = asyncio.get_event_loop().time()
+    logger = logging.getLogger('csgoleague.api')
+    logger.info(f'Sending {params.method} request to {params.url}')
+
+
+async def end_request_log(session, ctx, params):
+    """"""
+    logger = logging.getLogger('csgoleague.api')
+    elapsed = asyncio.get_event_loop().time() - ctx.start
+    logger.info(f'Response received from {params.url} ({elapsed:.2f}s)\n'
+                f'    Status: {params.response.status}\n'
+                f'    Reason: {params.response.reason}')
+    resp_json = await params.response.json()
+    logger.debug(f'Response JSON from {params.url}: {resp_json}')
+
 
 class ApiHelper:
     """ Class to contain API request wrapper functions. """
@@ -194,13 +212,25 @@ class ApiHelper:
         """ Set attributes. """
         self.base_url = base_url
         self.api_key = api_key
+        self.logger = logging.getLogger('csgoleague.api')
+
+        # Check API URL
+        if not self.base_url.startswith('https') and self.base_url.startswith('http'):
+            self.logger.warning(f'API url "{self.base_url}" should start with "https" instead of "http"')
+
+        # Register trace config handlers
+        trace_config = aiohttp.TraceConfig()
+        trace_config.on_request_start.append(start_request_log)
+        trace_config.on_request_end.append(end_request_log)
 
         # Start session
+        self.logger.info('Starting API helper client session')
         self.session = aiohttp.ClientSession(loop=loop, json_serialize=lambda x: json.dumps(x, ensure_ascii=False),
                                              raise_for_status=True)
 
     async def close(self):
         """ Close the API helper's session. """
+        self.logger.info('Closing API helper client session')
         await self.session.close()
 
     @property

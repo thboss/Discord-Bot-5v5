@@ -14,6 +14,7 @@ import json
 import sys
 import traceback
 import os
+import logging
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
@@ -43,6 +44,7 @@ class LeagueBot(commands.AutoShardedBot):
         # Set constants
         self.color = 0x0086FF
         self.activity = discord.Activity(type=discord.ActivityType.watching, name="CS:GO League")
+        self.logger = logging.getLogger('csgoleague.bot')
 
         # Create session for API
         self.api_helper = helpers.ApiHelper(self.loop, self.api_base_url, self.api_key)
@@ -64,11 +66,24 @@ class LeagueBot(commands.AutoShardedBot):
         self.scheduler.start()
 
         # Add cogs
-        self.add_cog(cogs.ConsoleCog(self))
+        self.add_cog(cogs.LoggingCog(self))
         self.add_cog(cogs.HelpCog(self))
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
         self.add_cog(cogs.CommandsCog(self))
+
+    async def on_error(self, event_method, *args, **kwargs):
+        """"""
+        try:
+            logging_cog = self.get_cog('LoggingCog')
+
+            if logging_cog is None:
+                super().on_error(event_method, *args, **kwargs)
+            else:
+                exc_type, exc_value, traceback = sys.exc_info()
+                logging_cog.log_exception(f'Uncaught exception when handling "{event_method}" event:', exc_value)
+        except Exception as e:
+            print(e)
 
     def embed_template(self, **kwargs):
         """ Implement the bot's default-style embed. """
@@ -128,13 +143,6 @@ class LeagueBot(commands.AutoShardedBot):
     async def on_guild_join(self, guild):
         """ Insert the newly added guild to the guilds table. """
         await self.create_emojis()
-
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        """ Send help message when a mis-entered command is received. """
-        if type(error) not in self.ignore_error_types:
-            print('Ignoring exception in command {}:'.format(ctx.command), file=sys.stderr)
-            traceback.print_exception(type(error), error, error.__traceback__, file=sys.stderr)
 
     def run(self):
         """ Override parent run to automatically include Discord token. """
