@@ -173,13 +173,19 @@ class TeamDraftMenu(discord.Message):
             fat_kid_team.append(self.members_left.pop(0))
             await self._update_menu(title)
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
             return
 
         if len(self.members_left) == 0:
             await self._update_menu(title)
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
             return
 
         await self._update_menu(title)
@@ -310,7 +316,10 @@ class MapVetoMenu(discord.Message):
         # Check if the veto is over
         if len(self.maps_left) == self.num_maps:
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
 
     async def veto(self, pool, captain_1, captain_2, num_maps):
         """"""
@@ -393,7 +402,10 @@ class ReadyMenu(discord.Message):
 
         if self.reactors.issuperset(self.members):
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
 
     async def ready_up(self):
         """"""
@@ -466,7 +478,10 @@ class MapVoteMenu(discord.Message):
         # Check if the voting is over
         if len(self.voted_members) == len(self.members):
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
 
     async def vote(self, mpool):
         """"""
@@ -571,7 +586,10 @@ class MatchTypeVoteMenu(discord.Message):
         # Check if the voting is over
         if len(self.voted_captains) == len(self.captains):
             if self.future is not None:
-                self.future.set_result(None)
+                try:
+                    self.future.set_result(None)
+                except asyncio.InvalidStateError:
+                    pass
 
     async def vote(self):
         """"""
