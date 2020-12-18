@@ -51,6 +51,7 @@ class TeamDraftMenu(discord.Message):
         self.members_left = None
         self.players = None
         self.teams = None
+        self.captains_emojis = None
         self.future = None
 
     @property
@@ -112,6 +113,7 @@ class TeamDraftMenu(discord.Message):
             raise PickError(translate('picker-pick-self', picker.display_name))
         elif not self.teams[0]:
             picking_team = self.teams[0]
+            self.captains_emojis.append(list(self.pick_emojis.keys())[list(self.pick_emojis.values()).index(picker)])
             self.members_left.remove(picker)
             picking_team.append(picker)
         elif self.teams[1] == [] and picker == self.teams[0][0]:
@@ -120,6 +122,7 @@ class TeamDraftMenu(discord.Message):
             raise PickError(translate('picker-not-captain', picker.display_name))
         elif not self.teams[1]:
             picking_team = self.teams[1]
+            self.captains_emojis.append(list(self.pick_emojis.keys())[list(self.pick_emojis.values()).index(picker)])
             self.members_left.remove(picker)
             picking_team.append(picker)
         elif picker == self.teams[0][0]:
@@ -168,6 +171,11 @@ class TeamDraftMenu(discord.Message):
             await self.clear_reaction(reaction.emoji)
             title = translate('team-picked', member.display_name, pick.display_name)
 
+        if len(self.members) - len(self.members_left) == 2:
+            await self.clear_reaction(self.captains_emojis[0])
+        elif len(self.members) - len(self.members_left) == 4:
+            await self.clear_reaction(self.captains_emojis[1])
+
         if len(self.members_left) == 1:
             fat_kid_team = self.teams[0] if len(self.teams[0]) <= len(self.teams[1]) else self.teams[1]
             fat_kid_team.append(self.members_left.pop(0))
@@ -197,6 +205,7 @@ class TeamDraftMenu(discord.Message):
         self.players = await self.bot.api_helper.get_players([member.id for member in self.members])
         self.teams = [[], []]
         self.pick_number = 0
+        self.captains_emojis = []
         captain_method = await self.bot.get_pug_data(self.channel.category, 'captain_method')
 
         if captain_method == 'rank':
@@ -207,6 +216,7 @@ class TeamDraftMenu(discord.Message):
                 captain = self.guild.get_member(players.pop(0).discord)
                 self.members_left.remove(captain)
                 team.append(captain)
+                self.captains_emojis.append(list(self.pick_emojis.keys())[list(self.pick_emojis.values()).index(captain)])
         elif captain_method == 'random':
             temp_members = self.members_left.copy()
             shuffle(temp_members)
@@ -215,6 +225,7 @@ class TeamDraftMenu(discord.Message):
                 captain = temp_members.pop()
                 self.members_left.remove(captain)
                 team.append(captain)
+                self.captains_emojis.append(list(self.pick_emojis.keys())[list(self.pick_emojis.values()).index(captain)])
         elif captain_method == 'volunteer':
             pass
         else:
