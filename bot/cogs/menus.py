@@ -564,7 +564,7 @@ class MatchTypeVoteMenu(discord.Message):
 
         # Add custom attributes
         self.bot = bot
-        self.numbers = EMOJI_NUMBERS[1:6]
+        self.numbers = EMOJI_NUMBERS[1:4]
         self.captains = captains
         self.voted_captains = {}
         self.future = None
