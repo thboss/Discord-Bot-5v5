@@ -20,11 +20,12 @@ def run_bot():
     bot_token = os.environ['DISCORD_BOT_TOKEN']
     api_url = os.environ['CSGO_LEAGUE_API_URL']
     api_key = os.environ['CSGO_LEAGUE_API_KEY']
+    donate_url = os.environ['CSGO_LEAGUE_DONATE_URL']
 
     if api_url.endswith('/'):
         api_url = api_url[:-1]
     # Instantiate bot and run
-    bot = LeagueBot(bot_token, api_url, api_key, db_connect_url)
+    bot = LeagueBot(bot_token, api_url, api_key, db_connect_url, donate_url)
     bot.run()
 
 

@@ -24,7 +24,7 @@ INTENTS_JSON = os.path.join(_CWD, 'intents.json')
 class LeagueBot(commands.AutoShardedBot):
     """ Sub-classed AutoShardedBot modified to fit the needs of the application. """
 
-    def __init__(self, discord_token, api_base_url, api_key, db_connect_url):
+    def __init__(self, discord_token, api_base_url, api_key, db_connect_url, donate_url = None):
         """ Set attributes and configure bot. """
         # Call parent init
         with open(INTENTS_JSON) as f:
@@ -38,6 +38,7 @@ class LeagueBot(commands.AutoShardedBot):
         self.api_base_url = api_base_url
         self.api_key = api_key
         self.db_connect_url = db_connect_url
+        self.donate_url = donate_url
         self.all_maps = {}
 
         # Set constants
@@ -67,6 +68,9 @@ class LeagueBot(commands.AutoShardedBot):
         self.add_cog(cogs.QueueCog(self))
         self.add_cog(cogs.MatchCog(self))
         self.add_cog(cogs.CommandsCog(self))
+
+        if self.donate_url:
+            self.add_cog(cogs.DonateCog(self))
 
     async def on_error(self, event_method, *args, **kwargs):
         """"""
