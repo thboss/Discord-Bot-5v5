@@ -2,7 +2,7 @@
 
 import aiohttp
 import asyncio
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.utils import get
 from discord.errors import HTTPException
 
@@ -26,15 +26,6 @@ class MatchCog(commands.Cog):
         self.match_dict = {}
         self.no_servers = {}
         self.no_servers = defaultdict(lambda: False, self.no_servers)
-
-        async def check_over_matches():
-            if self.match_dict:
-                matches = await self.bot.api_helper.matches_status()
-                for matchid in list(self.match_dict):
-                    if matchid in matches and not matches[matchid]:
-                        await self.delete_match_channels(matchid)
-
-        self.bot.scheduler.add_job(check_over_matches, 'interval', seconds=10, id='check_over')
 
     async def draft_teams(self, message, members):
         """ Create a TeamDraftMenu from an existing message and run the draft. """
@@ -150,7 +141,7 @@ class MatchCog(commands.Cog):
             except (AttributeError, HTTPException):
                 pass
 
-    async def delete_match_channels(self, matchid):
+    async def end_match(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
 
         lobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
@@ -301,4 +292,17 @@ class MatchCog(commands.Cog):
             await self.ready_message[category].edit(embed=burst_embed)
             await self.create_match_channels(category, str(match.id), team_one, team_two)
 
+            if not self.update_matches.is_running():
+                self.update_matches.start()
+
             return True  # Everyone readied up
+
+    @tasks.loop(seconds=5.0)
+    async def update_matches(self):
+        if self.match_dict:
+            matches = await self.bot.api_helper.matches_status()
+            for matchid in list(self.match_dict):
+                if matchid in matches and not matches[matchid]:
+                    await self.end_match(matchid)
+        else:
+            self.update_matches.cancel()
