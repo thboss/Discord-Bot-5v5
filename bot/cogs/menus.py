@@ -347,8 +347,8 @@ class MapVetoMenu(discord.Message):
         # Edit input message and add emoji button reactions
         await self.edit(embed=self._veto_embed(translate('map-bans-begun')))
 
-        awaitables = [self.add_reaction(m.emoji) for m in self.map_pool]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        for m in self.map_pool:
+            await self.add_reaction(m.emoji)
 
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
@@ -501,8 +501,8 @@ class MapVoteMenu(discord.Message):
         self.map_votes = {m.emoji: 0 for m in self.map_pool}
         await self.edit(embed=self._vote_embed())
 
-        awaitables = [self.add_reaction(m.emoji) for m in self.map_pool]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        for m in self.map_pool:
+            await self.add_reaction(m.emoji)
 
         # Add listener handlers and wait until there are no maps left to ban
         self.future = self.bot.loop.create_future()
@@ -607,8 +607,8 @@ class MatchTypeVoteMenu(discord.Message):
         self.num_votes = {num: 0 for num in self.numbers}
         await self.edit(embed=self._vote_embed())
 
-        awaitables = [self.add_reaction(num) for num in self.numbers]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        for num in self.numbers:
+            await self.add_reaction(num)
 
         self.future = self.bot.loop.create_future()
         self.bot.add_listener(self._process_vote, name='on_reaction_add')
