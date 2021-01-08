@@ -1,7 +1,7 @@
 # Forked from [csgo-queue-bot](https://github.com/cameronshinn/csgo-queue-bot)
 
 ## Description
-- A Discord bot that allows setting up CS:GO PUGs and play with friends with easy setup matches and super smooth.
+- A Discord bot that allows setting up CS:GO PUGs and play with friends with easy setup matches and super smooth. 
 
 
 ## Features
