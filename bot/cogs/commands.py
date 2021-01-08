@@ -64,7 +64,7 @@ class CommandsCog(commands.Cog):
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()
 
-    @commands.command(usage='link <mention> <Steam64 ID>',
+    @commands.command(usage='link <mention> <Steam ID/Profile>',
                       brief=translate('command-link-brief'))
     async def link(self, ctx, *args):
         """ Force link player with steam on the backend. """
@@ -249,7 +249,6 @@ class CommandsCog(commands.Cog):
 
     @commands.command(usage='spectators {+|-} <mention> <mention> ...',
                       brief=translate('command-spectators-brief'))
-    @commands.has_permissions(administrator=True)
     async def spectators(self, ctx, *args):
         """"""
         if not await self.bot.is_pug_channel(ctx):
@@ -259,12 +258,16 @@ class CommandsCog(commands.Cog):
         curr_spectators = [ctx.guild.get_member(spectator_id) for spectator_id in curr_spectator_ids]
         spectators = ctx.message.mentions
 
-        if not spectators:
+        if not args:
             embed = self.bot.embed_template()
             embed.add_field(name=f'__Spectators__',
                             value='No spectators' if not curr_spectators else ''.join(f'{num}. {member.mention}\n' for num, member in enumerate(curr_spectators, start=1)))
             await ctx.send(embed=embed)
             return
+
+        author_perms = ctx.author.guild_permissions
+        if not author_perms.administrator:
+            raise commands.MissingPermissions(missing_perms=['administrator'])
 
         prefix = args[0]
         title = ''
@@ -347,7 +350,6 @@ class CommandsCog(commands.Cog):
 
     @commands.command(usage='mpool {+|-}<map name> ...',
                       brief=translate('command-mpool-brief'))
-    @commands.has_permissions(administrator=True)
     async def mpool(self, ctx, *args):
         """ Edit the guild's map pool for map drafts. """
         if not await self.bot.is_pug_channel(ctx):
@@ -359,6 +361,10 @@ class CommandsCog(commands.Cog):
         if len(args) == 0:
             embed = self.bot.embed_template(title=translate('map-pool'))
         else:
+            author_perms = ctx.author.guild_permissions
+            if not author_perms.administrator:
+                raise commands.MissingPermissions(missing_perms=['administrator'])
+
             description = ''
             any_wrong_arg = False  # Indicates if the command was used correctly
 

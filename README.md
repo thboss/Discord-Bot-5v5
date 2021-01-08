@@ -5,11 +5,11 @@
 
 
 ## Features
-- Authentication player's Discord account with their Steam throght WEB API.
+- Authentication player's Discord account with their Steam throght a WEB API.
 - Multiple queues per guild.
 - Multiple matches at time.
 - Multiple Servers.
-- Multiple maps (Bo1, Bo2, Bo3...).
+- Multiple maps (Bo1, Bo2, Bo3).
 - Join/Leave the queue based on lobby voice channel.
 - Queue ready up system.
 - Random/Ranked/Volunteer picking captains methods..
@@ -68,6 +68,8 @@
     CSGO_LEAGUE_API_KEY= # API from the CS:GO League web backend .env file
     CSGO_LEAGUE_API_URL= # URL where the web panel is hosted
 
+    CSGO_LEAGUE_DONATE_URL=
+
     POSTGRESQL_USER= # "csgoleague" (if you used the same username)
     POSTGRESQL_PASSWORD= # The DB password you set
     POSTGRESQL_DB= # "csgoleague" (if you used the same DB name)
@@ -101,13 +103,6 @@
 
 7. Once match over, Bot remove teams channels.
 
-#### NOTES
-1. How to add new maps to the map pool?
-      * Empty the database by running `python3 migrate.py down`.
-      * Add map icon (.png) to `assets/maps/icons/` and rename it like `Dust II-de_dust`.
-      * Apply the new database migrations by running `python3 migrate.py up`.
-
-2. You can rename roles and channels that bot has created it.
 
 ## Commands
 
@@ -117,13 +112,11 @@
 
 `q!delete` **-** Delete the current PUG <br>
 
-`q!forcelink <mention> <SteamId64>` **-** Force link a player on the backend <br>
+`q!link <mention> <Steam ID/Profile>` **-** Force link a player on the backend <br>
 
 `q!unlink <mention>` **-**  Delete the mentioned on the backend <br>
 
 `q!spectators {+|-} <mention> <mention> ...` **-** View/Add/Remove matches spectators  <br>
-
-`q!removespect <mention>` **-** Remove the mentioned user from the spectators <br>
 
 `q!empty` **-** Empty the queue <br>
 
