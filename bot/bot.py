@@ -15,7 +15,6 @@ import sys
 import traceback
 import os
 import logging
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
 
 
 _CWD = os.path.dirname(os.path.abspath(__file__))
@@ -61,9 +60,6 @@ class LeagueBot(commands.AutoShardedBot):
 
         # Trigger typing before every command
         self.before_invoke(commands.Context.trigger_typing)
-
-        self.scheduler = AsyncIOScheduler()
-        self.scheduler.start()
 
         # Add cogs
         self.add_cog(cogs.LoggingCog(self))
@@ -153,4 +149,3 @@ class LeagueBot(commands.AutoShardedBot):
         await super().close()
         await self.api_helper.close()
         await self.db_helper.close()
-        self.scheduler.shutdown(wait=False)
