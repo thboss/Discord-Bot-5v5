@@ -3,6 +3,7 @@
 from discord.ext import commands
 from discord.utils import get
 from discord.errors import NotFound
+from steam.steamid import SteamID, from_url
 
 from bot.helpers.utils import align_text, translate
 
@@ -63,58 +64,76 @@ class CommandsCog(commands.Cog):
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()
 
-    @commands.command(brief=translate('command-link-brief'))
-    async def link(self, ctx):
-        """ Link a player by sending them a link to sign in with steam on the backend. """
-        if not await self.bot.is_pug_channel(ctx):
-            return
-
-        is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
-
-        if is_linked:
-            player = await self.bot.api_helper.get_player(ctx.author.id)
-            title = translate('already-linked', player.steam_profile)
-        else:
-            link = await self.bot.api_helper.generate_link_url(ctx.author.id)
-
-            if link:
-                # Send the author a DM containing this link
-                try:
-                    await ctx.author.send(translate('dm-link', link))
-                    title = translate('link-sent')
-                except:
-                    title = translate('blocked-dm')
-            else:
-                title = translate('unknown-error')
-
-        embed = self.bot.embed_template(description=title)
-        await ctx.send(content=ctx.author.mention, embed=embed)
-
-    @commands.command(usage='forcelink <mention> <Steam64 ID>',
-                      brief=translate('command-forcelink-brief'))
-    @commands.has_permissions(administrator=True)
-    async def forcelink(self, ctx, *args):
+    @commands.command(usage='link <mention> <Steam64 ID>',
+                      brief=translate('command-link-brief'))
+    async def link(self, ctx, *args):
         """ Force link player with steam on the backend. """
         if not await self.bot.is_pug_channel(ctx):
             return
-        print(int(args[1]), type(int(args[1])))
-        try:
-            user = ctx.message.mentions[0]
-        except IndexError:
-            title = f"{translate('invalid-usage')}: `{self.bot.command_prefix[0]}forcelink <mention> <Steam64 ID>`"
-        else:
-            link = await self.bot.api_helper.force_link_discord(user.id, args[1])
 
-            if not link:
-                title = 'Sorry! Steam ID is already linked with another discord'
+        if not args and not ctx.message.mentions: # Link by sned url
+            is_linked = await self.bot.api_helper.is_linked(ctx.author.id)
+
+            if is_linked:
+                player = await self.bot.api_helper.get_player(ctx.author.id)
+                title = translate('already-linked', player.steam_profile)
             else:
-                title = translate('force-linked', user.display_name, args[1])
-                role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
-                role = ctx.guild.get_role(role_id)
-                await user.add_roles(role)
-                await self.bot.api_helper.update_discord_name(user)
+                link = await self.bot.api_helper.generate_link_url(ctx.author.id)
 
-        embed = self.bot.embed_template(title=title)
+                if link:
+                    # Send the author a DM containing this link
+                    try:
+                        await ctx.author.send(translate('dm-link', link))
+                        title = translate('link-sent')
+                    except:
+                        title = translate('blocked-dm')
+                else:
+                    title = translate('unknown-error')
+
+        else: # Force link
+            author_perms = ctx.author.guild_permissions
+            if not author_perms.administrator:
+                raise commands.MissingPermissions(missing_perms=['administrator'])
+
+            try:
+                user = ctx.message.mentions[0]
+                steam_id = SteamID(args[1])
+            except IndexError:
+                title = f"**{translate('invalid-usage')}: `{self.bot.command_prefix[0]}link <mention> <steam profile>`**"
+            else:
+                if not steam_id.is_valid():
+                    steam_id = from_url(args[1], http_timeout=15)
+                    if steam_id is None:
+                        steam_id = from_url(f'https://steamcommunity.com/id/{args[1]}/', http_timeout=15)
+                        if steam_id is None:
+                            raise commands.UserInputError(message='Please enter a valid SteamID or community url.')
+
+                link = await self.bot.api_helper.force_link_discord(user.id, steam_id)
+                member_ids = [member.id for member in ctx.guild.members]
+                players = await self.bot.api_helper.get_players(member_ids)
+                players = {p.discord: p.steam for p in players}
+
+                if not link:
+                    if user.id in players and players[user.id] == steam_id:
+                        player = await self.bot.api_helper.get_player(user.id)
+                        title = f'User **{user.display_name}** is already linked to **[Steam account]({player.steam_profile})**'
+                    else:
+                        try:
+                            steam_author = list(players.keys())[list(players.values()).index(steam_id)]
+                        except ValueError:
+                            title = f'Steam id **{steam_id}** is linked to another discord account (Not in this discord server)'
+                        else:
+                            title = f'Steam id **{steam_id}** is linked to another discord account : **{ctx.guild.get_member(steam_author).mention}**'
+
+                else:
+                    player = await self.bot.api_helper.get_player(user.id)
+                    title = translate('force-linked', user.display_name, player.steam_profile)
+                    role_id = await self.bot.get_pug_data(ctx.channel.category, 'pug_role')
+                    role = ctx.guild.get_role(role_id)
+                    await user.add_roles(role)
+                    await self.bot.api_helper.update_discord_name(user)
+
+        embed = self.bot.embed_template(description=title)
         await ctx.send(embed=embed)
 
     @commands.command(usage='unlink <mention>',
@@ -519,11 +538,16 @@ class CommandsCog(commands.Cog):
     @mpool.error
     @end.error
     @unlink.error
-    @forcelink.error
+    @link.error
     async def config_error(self, ctx, error):
         """ Respond to a permissions error with an explanation message. """
         if isinstance(error, commands.MissingPermissions):
             await ctx.trigger_typing()
             missing_perm = error.missing_perms[0].replace('_', ' ')
             embed = self.bot.embed_template(title=translate('required-perm', missing_perm))
+            await ctx.send(embed=embed)
+
+        if isinstance(error, commands.UserInputError):
+            await ctx.trigger_typing()
+            embed = self.bot.embed_template(title=str(error))
             await ctx.send(embed=embed)
