@@ -7,7 +7,7 @@ __depends__ = {'20200513_01_kPWNp-create-base-tables'}
 
 icons_dic = 'assets/maps/icons/'
 maps = [icon.split('-')[1].split('.')[0] for icon in os.listdir(icons_dic) if icon.endswith('.png') and '-' in icon and os.stat(icons_dic + icon).st_size < 256000]
-add_maps = drop_maps = 'ALTER TABLE pugs\n'
+add_maps = drop_maps = 'ALTER TABLE leagues\n'
 m = os.listdir('assets/maps/icons/')
 
 for i, _map in enumerate(maps):
@@ -24,16 +24,16 @@ for i, _map in enumerate(maps):
 
 steps = [
     step(
-        'CREATE TYPE map_method AS ENUM(\'captains\', \'vote\', \'random\');',
+        'CREATE TYPE map_method AS ENUM(\'ban\', \'vote\', \'random\');',
         'DROP TYPE map_method;'
     ),
     step(
         (
-            'ALTER TABLE pugs\n'
-            'ADD COLUMN map_method map_method DEFAULT \'captains\';'
+            'ALTER TABLE leagues\n'
+            'ADD COLUMN map_method map_method DEFAULT \'ban\';'
         ),
         (
-            'ALTER TABLE pugs\n'
+            'ALTER TABLE leagues\n'
             'DROP COLUMN map_method;'
         )
     ),

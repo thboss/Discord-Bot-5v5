@@ -123,7 +123,7 @@ class MatchCog(commands.Cog):
                                      'members_team_one': members_team_one,
                                      'members_team_two': members_team_two}
 
-        lobby_id = await self.bot.get_pug_data(league_category, 'voice_lobby')
+        lobby_id = await self.bot.get_league_data(league_category, 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
 
         # move members into thier team channels
@@ -144,16 +144,16 @@ class MatchCog(commands.Cog):
     async def end_match(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
 
-        lobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
+        lobby_id = await self.bot.get_league_data(self.match_dict[matchid]['league_category'], 'voice_lobby')
         lobby = self.bot.get_channel(lobby_id)
-        prelobby_id = await self.bot.get_pug_data(self.match_dict[matchid]['league_category'], 'voice_prelobby')
-        prelobby = self.bot.get_channel(prelobby_id)
+        prematch_id = await self.bot.get_guild_data(lobby.guild, 'prematch_channel')
+        prematch = self.bot.get_channel(prematch_id)
         match_players = self.match_dict[matchid]['members_team_one'] + self.match_dict[matchid]['members_team_two']
 
         for player in match_players:
             await lobby.set_permissions(player, overwrite=None)
             try:
-                await player.move_to(prelobby)
+                await player.move_to(prematch)
             except (AttributeError, HTTPException):
                 pass
 
@@ -168,7 +168,7 @@ class MatchCog(commands.Cog):
 
         queue_cog = self.bot.get_cog('QueueCog')
         msg = queue_cog.last_queue_msgs.get(category)
-        channel_id = await self.bot.get_pug_data(category, 'text_queue')
+        channel_id = await self.bot.get_league_data(category, 'text_queue')
         text_channel = category.guild.get_channel(channel_id)
 
         if msg is not None:
@@ -188,15 +188,15 @@ class MatchCog(commands.Cog):
             await asyncio.gather(*awaitables, loop=self.bot.loop)
             unreadied_profiles = [await self.bot.api_helper.get_player(member.id) for member in unreadied]
             description = ''.join(f':x: [{member.display_name}]({unreadied_profiles[num-1].league_profile})\n' for num, member in enumerate(unreadied, start=1))
-            prelobby_id = await self.bot.get_pug_data(category, 'voice_prelobby')
-            prelobby = category.guild.get_channel(prelobby_id)
+            prematch_id = await self.bot.get_guild_data(category.guild, 'prematch_channel')
+            prematch = category.guild.get_channel(prematch_id)
             title = translate('not-all-ready')
             burst_embed = self.bot.embed_template(title=title, description=description)
             burst_embed.set_footer(text=translate('not-ready-removed'))
             # disconnect unreadied players from the lobby voice channel
             for player in unreadied:
                 try:
-                    await player.move_to(prelobby)
+                    await player.move_to(prematch)
                 except (AttributeError, HTTPException):
                     pass
 
@@ -206,7 +206,7 @@ class MatchCog(commands.Cog):
             # Attempt to make teams and start match
             awaitables = [
                 self.ready_message[category].clear_reactions(),
-                self.bot.db_helper.get_pug(category.id)
+                self.bot.db_helper.get_league(category.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
 
@@ -230,14 +230,14 @@ class MatchCog(commands.Cog):
             spect_players = [await self.bot.api_helper.get_player(spect_id) for spect_id in spect_ids]
             spect_steams = [str(spect_player.steam) for spect_player in spect_players]
             # Get map pick
-            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_pug_data(category, m.dev_name)]
+            mpool = [m for m in self.bot.all_maps.values() if await self.bot.get_league_data(category, m.dev_name)]
 
             num_maps = await self.vote_match_type(self.ready_message[category], [team_one[0], team_two[0]])
 
             await self.ready_message[category].clear_reactions()
             await asyncio.sleep(1)
 
-            if map_method == 'captains' or num_maps > 1:
+            if map_method == 'ban' or num_maps > 1:
                 map_pick = await self.veto_maps(self.ready_message[category], mpool, team_one[0], team_two[0], num_maps)
             elif map_method == 'vote':
                 map_pick = await self.vote_maps(self.ready_message[category], mpool, members)

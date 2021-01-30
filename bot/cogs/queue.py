@@ -1,12 +1,13 @@
 # queue.py
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 from discord.errors import NotFound, HTTPException
 from discord.utils import get
 from collections import defaultdict
+from datetime import datetime, timezone
 import asyncio
 
-from bot.helpers.utils import translate
+from bot.helpers.utils import translate, timedelta_str
 
 
 class QueueCog(commands.Cog):
@@ -22,7 +23,7 @@ class QueueCog(commands.Cog):
     async def queue_embed(self, category, title=None):
         """ Method to create the queue embed for a guild. """
         queued_ids = await self.bot.db_helper.get_queued_users(category.id)
-        capacity = await self.bot.get_pug_data(category, 'capacity')
+        capacity = await self.bot.get_league_data(category, 'capacity')
         
         if len(queued_ids) > 1:
             players = await self.bot.api_helper.get_players(queued_ids)
@@ -51,7 +52,7 @@ class QueueCog(commands.Cog):
             msg = None
 
         try:
-            queue_id = await self.bot.get_pug_data(category, 'text_queue')
+            queue_id = await self.bot.get_league_data(category, 'text_queue')
         except:
             queue_id = None
 
@@ -68,12 +69,12 @@ class QueueCog(commands.Cog):
             return
 
         try:
-            after_id = await self.bot.get_pug_data(after.channel.category, 'voice_lobby')
+            after_id = await self.bot.get_league_data(after.channel.category, 'voice_lobby')
         except AttributeError:
             after_id = None
 
         try:
-            before_id = await self.bot.get_pug_data(before.channel.category, 'voice_lobby')
+            before_id = await self.bot.get_league_data(before.channel.category, 'voice_lobby')
         except AttributeError:
             before_id = None
 
@@ -87,20 +88,30 @@ class QueueCog(commands.Cog):
             if not await self.bot.api_helper.is_linked(member.id):  # Message author isn't linked
                 title = translate('account-not-linked', member.display_name)
             else:  # Message author is linked
+                if not self.check_unbans.is_running():
+                    self.check_unbans.start()
+
                 awaitables = [
                     self.bot.api_helper.get_player(member.id),
                     self.bot.db_helper.insert_users(member.id),
                     self.bot.db_helper.get_queued_users(after_lobby.category_id),
-                    self.bot.get_pug_data(after_lobby.category, 'capacity'),
-                    self.bot.db_helper.get_spect_users(after_lobby.category_id)
+                    self.bot.get_league_data(after_lobby.category, 'capacity'),
+                    self.bot.db_helper.get_spect_users(after_lobby.category_id),
+                    self.bot.db_helper.get_banned_users(after_lobby.guild.id)
                 ]
                 results = await asyncio.gather(*awaitables, loop=self.bot.loop)
                 player = results[0]
                 queue_ids = results[2]
                 capacity = results[3]
                 spect_ids = results[4]
+                banned_users = results[5]
 
-                if member.id in queue_ids:  # Author already in queue
+                if member.id in banned_users:  # Author is banned from joining the queue
+                    title = translate('is-banned', member.display_name)
+                    unban_time = banned_users[member.id]
+                    if unban_time is not None:  # If the user is banned for a duration
+                        title += f' for {timedelta_str(unban_time - datetime.now(timezone.utc))}'
+                elif member.id in queue_ids:  # Author already in queue
                     title = translate('already-in-queue', member.display_name)
                 elif member.id in spect_ids:  # Player in the spectators
                     title = translate('in-spectators', member.display_name)
@@ -119,9 +130,9 @@ class QueueCog(commands.Cog):
                     if len(queue_ids) == capacity:
                         self.block_lobby[after_lobby.category] = True
                         match_cog = self.bot.get_cog('MatchCog')
-                        pug_role_id = await self.bot.get_pug_data(after_lobby.category, 'pug_role')
-                        pug_role = member.guild.get_role(pug_role_id)
-                        await after_lobby.set_permissions(pug_role, connect=False)
+                        linked_role_id = await self.bot.get_guild_data(after_lobby.guild, 'linked_role')
+                        linked_role = member.guild.get_role(linked_role_id)
+                        await after_lobby.set_permissions(linked_role, connect=False)
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
                         all_readied = await match_cog.start_match(after_lobby.category, queue_members)
 
@@ -130,17 +141,17 @@ class QueueCog(commands.Cog):
 
                         if match_cog.no_servers[after_lobby.category]:
                             await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
-                            prelobby_id = await self.bot.get_pug_data(after_lobby.category, 'voice_prelobby')
-                            prelobby = after_lobby.guild.get_channel(prelobby_id)
+                            prematch_id = await self.bot.get_guild_data(after_lobby.guild, 'prematch_channel')
+                            prematch = after_lobby.guild.get_channel(prematch_id)
                             for member in queue_members:
                                 try:
-                                    await member.move_to(prelobby)
+                                    await member.move_to(prematch)
                                 except (AttributeError, HTTPException):
                                     pass
                             match_cog.no_servers[after_lobby.category] = False
 
                         self.block_lobby[after_lobby.category] = False
-                        await after_lobby.set_permissions(pug_role, connect=True)
+                        await after_lobby.set_permissions(linked_role, connect=True)
                         title = translate('players-in-queue')
                         embed = await self.queue_embed(after_lobby.category, title)
                         await self.update_last_msg(after_lobby.category, embed)
@@ -164,3 +175,27 @@ class QueueCog(commands.Cog):
             embed = await self.queue_embed(before_lobby.category, title)
             # Update queue display message
             await self.update_last_msg(before_lobby.category, embed)
+
+    @tasks.loop(seconds=30.0)
+    async def check_unbans(self):
+        banned_users = False
+        for guild in self.bot.guilds:
+            guild_bans = bool(await self.bot.db_helper.get_banned_users(guild.id))
+            if guild_bans:
+                banned_users = True
+                break
+
+        if banned_users:
+            unbanned_users = {}
+            for guild in self.bot.guilds:
+                guild_unbanned_users = await self.bot.db_helper.get_unbanned_users(guild.id)
+                unbanned_users[guild] = guild_unbanned_users
+            
+            for guild, member_ids in unbanned_users.items():
+                members = [get(guild.members, id=member_id) for member_id in member_ids]
+                banned_role_id = await self.bot.get_guild_data(guild, 'banned_role')
+                ban_role = guild.get_role(banned_role_id)
+                for member in members:
+                    await member.remove_roles(ban_role)
+        else:
+            self.check_unbans.cancel()

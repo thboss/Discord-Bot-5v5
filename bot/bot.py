@@ -90,18 +90,26 @@ class LeagueBot(commands.AutoShardedBot):
         kwargs['color'] = self.color
         return discord.Embed(**kwargs)
 
-    async def get_pug_data(self, category, data):
+    async def get_league_data(self, category, data):
         """"""
-        guild_data = await self.db_helper.get_pug(category.id)
+        league_data = await self.db_helper.get_league(category.id)
+        try:
+            return league_data[data]
+        except KeyError:
+            return None
+
+    async def get_guild_data(self, guild, data):
+        """"""
+        guild_data = await self.db_helper.get_guild(guild.id)
         try:
             return guild_data[data]
         except KeyError:
             return None
 
-    async def is_pug_channel(self, ctx):
+    async def valid_channel(self, ctx):
         """"""
         try:
-            channel_id = await self.get_pug_data(ctx.channel.category, 'text_commands')
+            channel_id = await self.get_league_data(ctx.channel.category, 'text_commands')
         except AttributeError:
             channel_id = None
         commands_channel = self.get_channel(channel_id)
@@ -132,17 +140,34 @@ class LeagueBot(commands.AutoShardedBot):
                                                      f'<:{emoji_dev}:{emoji.id}>',
                                                      f'{url_path}{icon.replace(" ", "%20")}')
 
+    async def prepare_guild(self, guild):
+        """"""
+        banned_role = await guild.create_role(name='Banned')
+        linked_role = await guild.create_role(name='Linked')
+        pre_match = await guild.create_voice_channel(name='Pre-Match')
+        await self.db_helper.update_guild(guild.id, banned_role=banned_role.id,
+                                                    linked_role=linked_role.id,
+                                                    prematch_channel=pre_match.id)
+
     @commands.Cog.listener()
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
         print('Creating emojis...')
+        #await self.db_helper.sync_guilds(self.guilds)
         await self.create_emojis()
         print('Bot is ready!')
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
         """ Insert the newly added guild to the guilds table. """
+        await self.db_helper.insert_guilds(guild.id)
+        await self.prepare_guild(guild)
         await self.create_emojis()
+
+    @commands.Cog.listener()
+    async def on_guild_remove(self, guild):
+        """ Delete the recently removed guild from the guilds table. """
+        await self.db_helper.delete_guilds(guild.id)
 
     def run(self):
         """ Override parent run to automatically include Discord token. """

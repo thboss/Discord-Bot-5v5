@@ -206,7 +206,7 @@ class TeamDraftMenu(discord.Message):
         self.teams = [[], []]
         self.pick_number = 0
         self.captains_emojis = []
-        captain_method = await self.bot.get_pug_data(self.channel.category, 'captain_method')
+        captain_method = await self.bot.get_league_data(self.channel.category, 'captain_method')
 
         if captain_method == 'rank':
             players = await self.bot.api_helper.get_players([member.id for member in self.members_left])
