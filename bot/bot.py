@@ -140,20 +140,11 @@ class LeagueBot(commands.AutoShardedBot):
                                                      f'<:{emoji_dev}:{emoji.id}>',
                                                      f'{url_path}{icon.replace(" ", "%20")}')
 
-    async def prepare_guild(self, guild):
-        """"""
-        banned_role = await guild.create_role(name='Banned')
-        linked_role = await guild.create_role(name='Linked')
-        pre_match = await guild.create_voice_channel(name='Pre-Match')
-        await self.db_helper.update_guild(guild.id, banned_role=banned_role.id,
-                                                    linked_role=linked_role.id,
-                                                    prematch_channel=pre_match.id)
-
     @commands.Cog.listener()
     async def on_ready(self):
         """ Synchronize the guilds the bot is in with the guilds table. """
         print('Creating emojis...')
-        #await self.db_helper.sync_guilds(self.guilds)
+        await self.db_helper.sync_guilds(*(guild.id for guild in self.guilds))
         await self.create_emojis()
         print('Bot is ready!')
 
@@ -161,7 +152,6 @@ class LeagueBot(commands.AutoShardedBot):
     async def on_guild_join(self, guild):
         """ Insert the newly added guild to the guilds table. """
         await self.db_helper.insert_guilds(guild.id)
-        await self.prepare_guild(guild)
         await self.create_emojis()
 
     @commands.Cog.listener()

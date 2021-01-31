@@ -27,28 +27,36 @@ class CommandsCog(commands.Cog):
             msg = f'{translate("invalid-usage")}: `{self.bot.command_prefix[0]}create <name>`'
         else:
             category = await ctx.guild.create_category_channel(name=args)
+            everyone_role = get(ctx.guild.roles, name='@everyone')
 
             awaitables = [
-                self.bot.get_guild_data(ctx.guild, 'linked_role'),
-                self.bot.get_guild_data(ctx.guild, 'banned_role'),
-                self.bot.db_helper.insert_leagues(category.id),
+                self.bot.db_helper.get_guild(ctx.guild.id),
                 ctx.guild.create_text_channel(name=f'queue', category=category),
                 ctx.guild.create_text_channel(name=f'commands', category=category),
-                ctx.guild.create_voice_channel(name=f'Lobby', category=category, user_limit=10)
+                ctx.guild.create_voice_channel(name=f'Lobby', category=category, user_limit=10),
+                self.bot.db_helper.insert_leagues(category.id)
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
 
-            linked_role = ctx.guild.get_role(results[0])
-            banned_role = ctx.guild.get_role(results[1])
-            everyone_role = get(ctx.guild.roles, name='@everyone')
-            queue_channel = results[3]
-            commands_channel = results[4]
-            lobby_channel = results[5]
+            banned_role = ctx.guild.get_role(results[0]['banned_role'])
+            linked_role = ctx.guild.get_role(results[0]['linked_role'])
+            prematch_channel = ctx.guild.get_channel(results[0]['prematch_channel'])
+            queue_channel = results[1]
+            commands_channel = results[2]
+            lobby_channel = results[3]
+
+            banned_role = await ctx.guild.create_role(name='Banned') if banned_role is None else banned_role
+            linked_role = await ctx.guild.create_role(name='Linked') if linked_role is None else linked_role
+            prematch_channel = await ctx.guild.create_voice_channel(
+                name='Pre-Match') if prematch_channel is None else prematch_channel
 
             awaitables = [
                 self.bot.db_helper.update_league(category.id, text_queue=queue_channel.id,
                                                               text_commands=commands_channel.id,
                                                               voice_lobby=lobby_channel.id),
+                self.bot.db_helper.update_guild(ctx.guild.id, linked_role=linked_role.id,
+                                                              banned_role=banned_role.id,
+                                                              prematch_channel=prematch_channel.id),
                 queue_channel.set_permissions(everyone_role, send_messages=False),
                 lobby_channel.set_permissions(everyone_role, connect=False),
                 lobby_channel.set_permissions(linked_role, connect=True),
@@ -66,13 +74,6 @@ class CommandsCog(commands.Cog):
     async def delete(self, ctx):
         if not await self.bot.valid_channel(ctx):
             return
-
-        linked_role_id = await self.bot.get_guild_data(ctx.guild, 'linked_role')
-        linked_role = ctx.guild.get_role(linked_role_id)
-        try:
-            await linked_role.delete()
-        except NotFound:
-            pass
 
         await self.bot.db_helper.delete_leagues(ctx.channel.category_id)
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
