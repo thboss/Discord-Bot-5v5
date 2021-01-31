@@ -100,21 +100,23 @@ class MatchCog(commands.Cog):
 
     async def create_match_channels(self, league_category, match_id, members_team_one, members_team_two):
         """ Create teams voice channels and move players into. """
+        match_category = await league_category.guild.create_category_channel(
+            f'{translate("match")}{match_id}',
+            position=league_category.guild.channels.index(league_category) + 1)
 
-        match_category = await league_category.guild.create_category_channel(f'{translate("match")}{match_id}')
-        role = get(league_category.guild.roles, name='@everyone')
+        everyone_role = get(league_category.guild.roles, name='@everyone')
 
         channel_team_one = await league_category.guild.create_voice_channel(
             name=f'{translate("team")} {members_team_one[0].display_name}',
             category=match_category,
             user_limit=len(members_team_one))
-        await channel_team_one.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_one.set_permissions(everyone_role, connect=False, read_messages=True)
 
         channel_team_two = await league_category.guild.create_voice_channel(
             name=f'{translate("team")} {members_team_two[0].display_name}',
             category=match_category,
             user_limit=len(members_team_two))
-        await channel_team_two.set_permissions(role, connect=False, read_messages=True)
+        await channel_team_two.set_permissions(everyone_role, connect=False, read_messages=True)
 
         self.match_dict[match_id] = {'league_category': league_category,
                                      'match_category': match_category,
