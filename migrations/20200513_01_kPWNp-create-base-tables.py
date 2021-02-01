@@ -40,6 +40,16 @@ steps = [
     ),
     step(
         (
+            'CREATE TABLE guild_leagues(\n'
+            '    guild_id BIGSERIAL REFERENCES guilds (id) ON DELETE CASCADE,\n'
+            '    league_id BIGSERIAL REFERENCES leagues (id),\n'
+            '    CONSTRAINT guild_league_pkey PRIMARY KEY (guild_id, league_id)\n'
+            ');'
+        ),
+        'DROP TABLE guild_leagues;'
+    ),
+    step(
+        (
             'CREATE TABLE users('
             '    id BIGSERIAL PRIMARY KEY'
             ');'

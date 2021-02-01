@@ -146,6 +146,58 @@ class DBHelper:
 
         return self._get_record_attrs(deleted, 'id')
 
+    async def get_guild_leagues(self, guild_id):
+        """ Get all leagues of the guild from the guild_leagues table. """
+        statement = (
+            'SELECT league_id FROM guild_leagues\n'
+            '    WHERE guild_id = $1;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                leagues = await connection.fetch(statement, guild_id)
+
+        return self._get_record_attrs(leagues, 'league_id')
+
+    async def insert_guild_leagues(self, guild_id, *league_ids):
+        """ Insert multiple leagues of a guild into the guild_leagues table. """
+        statement = (
+            'INSERT INTO guild_leagues (guild_id, league_id)\n'
+            '    (SELECT * FROM unnest($1::guild_leagues[]));'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                await connection.execute(statement, [(guild_id, league_id) for league_id in league_ids])
+
+    async def delete_guild_leagues(self, guild_id, *league_ids):
+        """ Delete multiple leagues of a guild from the guild_leagues table. """
+        statement = (
+            'DELETE FROM guild_leagues\n'
+            '    WHERE guild_id = $1 AND league_id = ANY($2::BIGINT[])\n'
+            '    RETURNING league_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id, league_ids)
+
+        return self._get_record_attrs(deleted, 'league_id')
+
+    async def clear_guild_leagues(self, guild_id):
+        """ Delete all leagues of a guild from the guild_leagues table. """
+        statement = (
+            'DELETE FROM guild_leagues\n'
+            '    WHERE guild_id = $1\n'
+            '    RETURNING league_id;'
+        )
+
+        async with self.pool.acquire() as connection:
+            async with connection.transaction():
+                deleted = await connection.fetch(statement, guild_id)
+
+        return self._get_record_attrs(deleted, 'league_id')
+
     async def insert_users(self, *user_ids):
         """ Insert multiple users into the users table. """
         rows = [(user_id,) for user_id in user_ids]

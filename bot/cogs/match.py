@@ -102,7 +102,7 @@ class MatchCog(commands.Cog):
         """ Create teams voice channels and move players into. """
         match_category = await league_category.guild.create_category_channel(
             f'{translate("match")}{match_id}',
-            position=league_category.guild.channels.index(league_category) + 1)
+            position=league_category.guild.channels.index(league_category))
 
         everyone_role = get(league_category.guild.roles, name='@everyone')
 
@@ -129,19 +129,15 @@ class MatchCog(commands.Cog):
         lobby = self.bot.get_channel(lobby_id)
 
         # move members into thier team channels
+        awaitables = []
         for m1, m2 in zip(members_team_one, members_team_two):
-            await channel_team_one.set_permissions(m1, connect=True)
-            await lobby.set_permissions(m1, connect=False)
-            await channel_team_two.set_permissions(m2, connect=True)
-            await lobby.set_permissions(m2, connect=False)            
-            try:
-                await m1.move_to(channel_team_one)
-            except (AttributeError, HTTPException):
-                pass 
-            try:
-                await m2.move_to(channel_team_two)
-            except (AttributeError, HTTPException):
-                pass
+            awaitables.append(channel_team_one.set_permissions(m1, connect=True))
+            awaitables.append(lobby.set_permissions(m1, connect=False))
+            awaitables.append(channel_team_two.set_permissions(m2, connect=True))
+            awaitables.append(lobby.set_permissions(m2, connect=False)) 
+            awaitables.append(m1.move_to(channel_team_one))
+            awaitables.append(m2.move_to(channel_team_two))
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
     async def end_match(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
@@ -152,16 +148,21 @@ class MatchCog(commands.Cog):
         prematch = self.bot.get_channel(prematch_id)
         match_players = self.match_dict[matchid]['members_team_one'] + self.match_dict[matchid]['members_team_two']
 
-        for player in match_players:
-            await lobby.set_permissions(player, overwrite=None)
-            try:
-                await player.move_to(prematch)
-            except (AttributeError, HTTPException):
-                pass
+        awaitables = []
+        for league_id in await self.bot.db_helper.get_guild_leagues(lobby.guild.id):
+            lobby_id = await self.bot.get_league_data(self.bot.get_channel(league_id), 'voice_lobby')
+            lobby = self.bot.get_channel(lobby_id)
+            for member in match_players:
+                awaitables.append(lobby.set_permissions(member, overwrite=None))
+                awaitables.append(member.move_to(prematch))
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
-        await self.match_dict[matchid]['channel_team_two'].delete()
-        await self.match_dict[matchid]['channel_team_one'].delete()
-        await self.match_dict[matchid]['match_category'].delete()
+        awaitables = [
+            self.match_dict[matchid]['channel_team_two'].delete(),
+            self.match_dict[matchid]['channel_team_one'].delete(),
+            self.match_dict[matchid]['match_category'].delete()
+        ]
+        await asyncio.gather(*awaitables, loop=self.bot.loop)
 
         self.match_dict.pop(matchid)
 

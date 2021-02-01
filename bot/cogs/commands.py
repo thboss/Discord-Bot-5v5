@@ -34,9 +34,11 @@ class CommandsCog(commands.Cog):
                 ctx.guild.create_text_channel(name=f'queue', category=category),
                 ctx.guild.create_text_channel(name=f'commands', category=category),
                 ctx.guild.create_voice_channel(name=f'Lobby', category=category, user_limit=10),
-                self.bot.db_helper.insert_leagues(category.id)
+                self.bot.db_helper.insert_leagues(category.id),
             ]
             results = await asyncio.gather(*awaitables, loop=self.bot.loop)
+
+            await self.bot.db_helper.insert_guild_leagues(ctx.guild.id, category.id)
 
             banned_role = ctx.guild.get_role(results[0]['banned_role'])
             linked_role = ctx.guild.get_role(results[0]['linked_role'])
@@ -75,6 +77,7 @@ class CommandsCog(commands.Cog):
         if not await self.bot.valid_channel(ctx):
             return
 
+        await self.bot.db_helper.delete_guild_leagues(ctx.guild.id, ctx.channel.category_id)
         await self.bot.db_helper.delete_leagues(ctx.channel.category_id)
         for channel in ctx.channel.category.channels + [ctx.channel.category]:
             await channel.delete()

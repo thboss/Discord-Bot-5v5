@@ -132,8 +132,16 @@ class QueueCog(commands.Cog):
                         match_cog = self.bot.get_cog('MatchCog')
                         linked_role_id = await self.bot.get_guild_data(after_lobby.guild, 'linked_role')
                         linked_role = member.guild.get_role(linked_role_id)
-                        await after_lobby.set_permissions(linked_role, connect=False)
                         queue_members = [member.guild.get_member(member_id) for member_id in queue_ids]
+                        awaitables = [after_lobby.set_permissions(linked_role, connect=False)]
+
+                        for league_id in await self.bot.db_helper.get_guild_leagues(after_lobby.guild.id):
+                            lobby_id = await self.bot.get_league_data(self.bot.get_channel(league_id), 'voice_lobby')
+                            lobby = self.bot.get_channel(lobby_id)
+                            for member in queue_members:
+                                awaitables.append(lobby.set_permissions(member, connect=False))
+                        await asyncio.gather(*awaitables, loop=self.bot.loop)
+
                         all_readied = await match_cog.start_match(after_lobby.category, queue_members)
 
                         if all_readied:
@@ -143,14 +151,22 @@ class QueueCog(commands.Cog):
                             await self.bot.db_helper.delete_queued_users(after_lobby.category_id, *queue_ids)
                             prematch_id = await self.bot.get_guild_data(after_lobby.guild, 'prematch_channel')
                             prematch = after_lobby.guild.get_channel(prematch_id)
+
+                            awaitables = []
                             for member in queue_members:
-                                try:
-                                    await member.move_to(prematch)
-                                except (AttributeError, HTTPException):
-                                    pass
+                                awaitables.append(member.move_to(prematch))
+
                             match_cog.no_servers[after_lobby.category] = False
 
+                            for league_id in await self.bot.db_helper.get_guild_leagues(after_lobby.guild.id):
+                                lobby_id = await self.bot.get_league_data(self.bot.get_channel(league_id), 'voice_lobby')
+                                lobby = self.bot.get_channel(lobby_id)
+                                for member in queue_members:
+                                    awaitables.append(lobby.set_permissions(member, overwrite=None))
+                            await asyncio.gather(*awaitables, loop=self.bot.loop)
+
                         self.block_lobby[after_lobby.category] = False
+
                         await after_lobby.set_permissions(linked_role, connect=True)
                         title = translate('players-in-queue')
                         embed = await self.queue_embed(after_lobby.category, title)
