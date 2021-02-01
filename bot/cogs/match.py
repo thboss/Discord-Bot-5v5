@@ -100,9 +100,9 @@ class MatchCog(commands.Cog):
 
     async def create_match_channels(self, league_category, match_id, members_team_one, members_team_two):
         """ Create teams voice channels and move players into. """
+        category_position = league_category.guild.channels.index(league_category)
         match_category = await league_category.guild.create_category_channel(
-            f'{translate("match")}{match_id}',
-            position=league_category.guild.channels.index(league_category))
+            f'{translate("match")}{match_id}', position=category_position)
 
         everyone_role = get(league_category.guild.roles, name='@everyone')
 
@@ -137,7 +137,7 @@ class MatchCog(commands.Cog):
             awaitables.append(lobby.set_permissions(m2, connect=False)) 
             awaitables.append(m1.move_to(channel_team_one))
             awaitables.append(m2.move_to(channel_team_two))
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        await asyncio.gather(*awaitables, loop=self.bot.loop, return_exceptions=True)
 
     async def end_match(self, matchid):
         """ Move match players to pre-lobby and delete teams voice channels on match end. """
@@ -155,14 +155,14 @@ class MatchCog(commands.Cog):
             for member in match_players:
                 awaitables.append(lobby.set_permissions(member, overwrite=None))
                 awaitables.append(member.move_to(prematch))
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        await asyncio.gather(*awaitables, loop=self.bot.loop, return_exceptions=True)
 
         awaitables = [
             self.match_dict[matchid]['channel_team_two'].delete(),
             self.match_dict[matchid]['channel_team_one'].delete(),
             self.match_dict[matchid]['match_category'].delete()
         ]
-        await asyncio.gather(*awaitables, loop=self.bot.loop)
+        await asyncio.gather(*awaitables, loop=self.bot.loop, return_exceptions=True)
 
         self.match_dict.pop(matchid)
 
