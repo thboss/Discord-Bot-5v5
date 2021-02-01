@@ -81,6 +81,21 @@ class QueueCog(commands.Cog):
         before_lobby = member.guild.get_channel(before_id)
         after_lobby = member.guild.get_channel(after_id)
 
+        if before.channel == before_lobby is not None:
+            if self.block_lobby[before_lobby.category]:
+                return
+
+            removed = await self.bot.db_helper.delete_queued_users(before_lobby.category_id, member.id)
+
+            if member.id in removed:
+                title = translate('removed-from-queue', member.display_name)
+            else:
+                title = translate('not-in-queue', member.display_name)
+
+            embed = await self.queue_embed(before_lobby.category, title)
+            # Update queue display message
+            await self.update_last_msg(before_lobby.category, embed)
+
         if after.channel == after_lobby is not None:
             if self.block_lobby[after_lobby.category]:
                 return
@@ -90,6 +105,16 @@ class QueueCog(commands.Cog):
             else:  # Message author is linked
                 if not self.check_unbans.is_running():
                     self.check_unbans.start()
+
+                awaitables = []
+                for league_id in await self.bot.db_helper.get_guild_leagues(after_lobby.guild.id):
+                    if league_id != after_lobby.category.id:
+                        awaitables.append(self.bot.db_helper.get_queued_users(league_id))
+                results = await asyncio.gather(*awaitables, loop=self.bot.loop)
+
+                others_queue_ids = []
+                for queue_ids in results:
+                    others_queue_ids.extend(queue_ids)
 
                 awaitables = [
                     self.bot.api_helper.get_player(member.id),
@@ -113,6 +138,8 @@ class QueueCog(commands.Cog):
                         title += f' for {timedelta_str(unban_time - datetime.now(timezone.utc))}'
                 elif member.id in queue_ids:  # Author already in queue
                     title = translate('already-in-queue', member.display_name)
+                elif member.id in others_queue_ids:
+                    title = f'Player **{member.display_name}** is already in another queue'
                 elif member.id in spect_ids:  # Player in the spectators
                     title = translate('in-spectators', member.display_name)
                 elif len(queue_ids) >= capacity:  # Queue full
@@ -140,7 +167,7 @@ class QueueCog(commands.Cog):
                             lobby = self.bot.get_channel(lobby_id)
                             for member in queue_members:
                                 awaitables.append(lobby.set_permissions(member, connect=False))
-                        await asyncio.gather(*awaitables, loop=self.bot.loop)
+                        await asyncio.gather(*awaitables, loop=self.bot.loop, return_exceptions=True)
 
                         all_readied = await match_cog.start_match(after_lobby.category, queue_members)
 
@@ -163,7 +190,7 @@ class QueueCog(commands.Cog):
                                 lobby = self.bot.get_channel(lobby_id)
                                 for member in queue_members:
                                     awaitables.append(lobby.set_permissions(member, overwrite=None))
-                            await asyncio.gather(*awaitables, loop=self.bot.loop)
+                            await asyncio.gather(*awaitables, loop=self.bot.loop, return_exceptions=True)
 
                         self.block_lobby[after_lobby.category] = False
 
@@ -176,21 +203,6 @@ class QueueCog(commands.Cog):
             embed = await self.queue_embed(after_lobby.category, title)
             # Delete last queue message
             await self.update_last_msg(after_lobby.category, embed)
-
-        if before.channel == before_lobby is not None:
-            if self.block_lobby[before_lobby.category]:
-                return
-
-            removed = await self.bot.db_helper.delete_queued_users(before_lobby.category_id, member.id)
-
-            if member.id in removed:
-                title = translate('removed-from-queue', member.display_name)
-            else:
-                title = translate('not-in-queue', member.display_name)
-
-            embed = await self.queue_embed(before_lobby.category, title)
-            # Update queue display message
-            await self.update_last_msg(before_lobby.category, embed)
 
     @tasks.loop(seconds=30.0)
     async def check_unbans(self):
